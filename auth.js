@@ -188,11 +188,17 @@ window.AUTH = {
     checkAuthStatus: async function() {
         try {
             if (!this.userCodeInfo.userCode) {
-                showToast('warning', 'Nenhum código de autenticação ativo');
+                console.log('Nenhum código de autenticação ativo');
+                if (this._authCheckInterval) {
+                    clearInterval(this._authCheckInterval);
+                    this._authCheckInterval = null;
+                }
                 return;
             }
 
-            const response = await fetch(this.baseUrl + '/authentication/v1.0/oauth/userCode/status', {
+            console.log('Verificando status para o código:', this.userCodeInfo.userCode);
+
+            const response = await fetch(this.baseUrl + '/oauth/userCode/status', {
                 method: 'GET',
                 headers: {
                     'Content-Type': 'application/json',
@@ -201,14 +207,19 @@ window.AUTH = {
             });
 
             if (!response.ok) {
-                throw new Error('Falha ao verificar status da autenticação');
+                const errorText = await response.text();
+                console.error('Erro na resposta do status:', errorText);
+                throw new Error('Falha ao verificar status: ' + errorText);
             }
 
             const data = await response.json();
+            console.log('Status recebido:', data);
 
             if (data.status === 'AUTHORIZATION_PENDING') {
+                console.log('Aguardando autorização do usuário...');
                 showToast('info', 'Aguardando autorização do usuário...');
             } else if (data.status === 'AUTHORIZATION_GRANTED') {
+                console.log('Autorização concedida! Código:', data.authorizationCode);
                 // Limpa o intervalo de verificação
                 if (this._authCheckInterval) {
                     clearInterval(this._authCheckInterval);
@@ -217,10 +228,27 @@ window.AUTH = {
 
                 // Obtém o token de acesso
                 await this.getTokenWithAuthCode(data.authorizationCode);
+            } else if (data.status === 'EXPIRED') {
+                console.log('Código expirado');
+                showToast('error', 'Código expirado. Gere um novo código.');
+                if (this._authCheckInterval) {
+                    clearInterval(this._authCheckInterval);
+                    this._authCheckInterval = null;
+                }
             }
         } catch (error) {
-            console.error('Erro ao verificar status da autenticação:', error);
-            showToast('error', 'Erro ao verificar status da autenticação');
+            console.error('Erro detalhado ao verificar status:', error);
+            // Não mostra toast de erro para não sobrecarregar a interface
+            // showToast('error', 'Erro ao verificar status da autenticação');
+            
+            // Se o erro for de código expirado ou inválido, para a verificação
+            if (error.message.includes('404') || error.message.includes('EXPIRED')) {
+                console.log('Parando verificação devido a código inválido ou expirado');
+                if (this._authCheckInterval) {
+                    clearInterval(this._authCheckInterval);
+                    this._authCheckInterval = null;
+                }
+            }
         }
     },
 
