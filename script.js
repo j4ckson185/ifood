@@ -4,56 +4,62 @@
 
 // Inicializa a aplicação quando o DOM estiver carregado
 document.addEventListener('DOMContentLoaded', function() {
-    // Certifica de que os objetos globais estão definidos antes de usar
-    if (typeof AUTH !== 'undefined' && typeof MERCHANT !== 'undefined' && 
-        typeof ORDERS !== 'undefined' && typeof REVIEWS !== 'undefined') {
-        initApp();
-    } else {
-        console.error("Objetos globais não estão definidos corretamente!");
-        alert("Erro ao inicializar aplicação. Verifique o console para mais detalhes.");
+    console.log("DOM carregado, iniciando aplicação...");
+    
+    // Verifica se os objetos foram carregados
+    if (typeof window.AUTH === 'undefined' || 
+        typeof window.MERCHANT === 'undefined' || 
+        typeof window.ORDERS === 'undefined' || 
+        typeof window.REVIEWS === 'undefined') {
+        console.error("Erro: Objetos globais não estão definidos!");
+        alert("Erro ao inicializar aplicação. Verifique se todos os scripts foram carregados.");
+        return;
     }
+    
+    // Verifica se as funções init existem
+    if (typeof window.AUTH.init !== 'function') {
+        console.error("Erro: AUTH.init não é uma função!");
+        return;
+    }
+    
+    if (typeof window.MERCHANT.init !== 'function') {
+        console.error("Erro: MERCHANT.init não é uma função!");
+        return;
+    }
+    
+    if (typeof window.ORDERS.init !== 'function') {
+        console.error("Erro: ORDERS.init não é uma função!");
+        return;
+    }
+    
+    if (typeof window.REVIEWS.init !== 'function') {
+        console.error("Erro: REVIEWS.init não é uma função!");
+        return;
+    }
+    
+    // Inicializa a aplicação
+    initApp();
 });
 
-/**
- * Inicializa a aplicação
- */
 function initApp() {
     try {
-        // Inicializa o módulo de autenticação
-        if (typeof AUTH.init === 'function') {
-            AUTH.init();
-        } else {
-            console.error("AUTH.init não é uma função!");
-        }
+        console.log("Iniciando aplicação...");
         
-        // Inicializa o módulo de merchant
-        if (typeof MERCHANT.init === 'function') {
-            MERCHANT.init();
-        } else {
-            console.error("MERCHANT.init não é uma função!");
-        }
-        
-        // Inicializa o módulo de pedidos
-        if (typeof ORDERS.init === 'function') {
-            ORDERS.init();
-        } else {
-            console.error("ORDERS.init não é uma função!");
-        }
-        
-        // Inicializa o módulo de avaliações
-        if (typeof REVIEWS.init === 'function') {
-            REVIEWS.init();
-        } else {
-            console.error("REVIEWS.init não é uma função!");
-        }
+        // Inicializa os módulos
+        window.AUTH.init();
+        window.MERCHANT.init();
+        window.ORDERS.init();
+        window.REVIEWS.init();
         
         // Configura listeners de eventos para UI
         setupUIEvents();
         
-        // Carrega dados iniciais após 500ms para garantir que todos os módulos foram inicializados
+        // Carrega dados iniciais após 500ms
         setTimeout(function() {
             loadInitialData();
         }, 500);
+        
+        console.log("Aplicação iniciada com sucesso!");
     } catch (error) {
         console.error("Erro ao inicializar a aplicação:", error);
         alert("Erro ao inicializar aplicação: " + error.message);
