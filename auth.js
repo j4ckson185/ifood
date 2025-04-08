@@ -23,43 +23,71 @@ window.AUTH = {
         token_type: 'bearer'
     },
     
-    // Inicializa o módulo de autenticação
-    init: function() {
-        console.log("Inicializando módulo AUTH");
-        
-        // Carrega as credenciais do localStorage
-        var savedCredentials = localStorage.getItem('ifood_credentials');
-        if (savedCredentials) {
-            try {
-                var parsed = JSON.parse(savedCredentials);
-                // Mantenha as credenciais padrão se não houver no localStorage
-                this.credentials.client_id = parsed.client_id || this.credentials.client_id;
-                this.credentials.client_secret = parsed.client_secret || this.credentials.client_secret;
-                this.credentials.merchantId = parsed.merchantId || this.credentials.merchantId;
-                this.credentials.merchantUuid = parsed.merchantUuid || this.credentials.merchantUuid;
-            } catch (e) {
-                console.error("Erro ao analisar credenciais salvas:", e);
-            }
+// Dentro do módulo AUTH, modifique o método init
+init: function() {
+    console.log("Inicializando módulo AUTH");
+    
+    // Credenciais padrão
+    this.credentials = {
+        client_id: '6015fafa-fd3e-4053-9080-bfdbf6e78526',
+        client_secret: 'p1jv9gtn6loszhrl6tmcpwaeuk21w4ukrudeinuzfwihb9fqdutubsbbggav8rkbsiqgik45kdgdp471ua2ivmh25dz7mywcfc4',
+        merchantId: '2733980',
+        merchantUuid: '3a9fc83b-ffc3-43e9-aeb6-36c9e827a143'
+    };
+    
+    // Carrega as credenciais do localStorage
+    var savedCredentials = localStorage.getItem('ifood_credentials');
+    if (savedCredentials) {
+        try {
+            var parsed = JSON.parse(savedCredentials);
+            
+            // Mescla as credenciais salvas com as credenciais padrão
+            this.credentials = {
+                client_id: parsed.client_id || this.credentials.client_id,
+                client_secret: parsed.client_secret || this.credentials.client_secret,
+                merchantId: parsed.merchantId || this.credentials.merchantId,
+                merchantUuid: parsed.merchantUuid || this.credentials.merchantUuid
+            };
+        } catch (e) {
+            console.error("Erro ao analisar credenciais salvas:", e);
         }
-        
-        // Carrega o token do localStorage
-        var savedToken = localStorage.getItem('ifood_token');
-        if (savedToken) {
-            try {
-                this.token = JSON.parse(savedToken);
-            } catch (e) {
-                console.error("Erro ao analisar token salvo:", e);
-            }
+    }
+    
+    // Garante que todas as propriedades estejam definidas
+    ['client_id', 'client_secret', 'merchantId', 'merchantUuid'].forEach(prop => {
+        if (!this.credentials[prop]) {
+            console.warn(`Propriedade ${prop} não definida. Usando valor padrão.`);
+            this.credentials[prop] = this.credentials[prop] || '';
         }
-        
-        // Atualiza a UI com o ID do merchant
-        if (document.getElementById('merchant-id-display')) {
-            document.getElementById('merchant-id-display').textContent = this.credentials.merchantId;
+    });
+    
+    // Salva as credenciais mescladas de volta no localStorage
+    localStorage.setItem('ifood_credentials', JSON.stringify(this.credentials));
+    
+    // Carrega o token do localStorage
+    var savedToken = localStorage.getItem('ifood_token');
+    if (savedToken) {
+        try {
+            this.token = JSON.parse(savedToken);
+        } catch (e) {
+            console.error("Erro ao analisar token salvo:", e);
+            this.token = {
+                access_token: '',
+                refresh_token: '',
+                expires_at: 0,
+                token_type: 'bearer'
+            };
         }
-        
-        // Preencher campos do formulário de configurações com valores atuais
-        this.updateSettingsForm();
-    },
+    }
+    
+    // Atualiza a UI com o ID do merchant
+    if (document.getElementById('merchant-id-display')) {
+        document.getElementById('merchant-id-display').textContent = this.credentials.merchantId;
+    }
+    
+    // Preencher campos do formulário de configurações com valores atuais
+    this.updateSettingsForm();
+},
     
     // Atualiza os campos do formulário de configurações
     updateSettingsForm: function() {
