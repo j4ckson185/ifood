@@ -6,7 +6,7 @@
 // NÃO use "const AUTH = { ... }"
 AUTH = {
     // URL base para a API de produção (usar .netlify/functions/proxy para contornar CORS)
-    baseUrl: '/.netlify/functions/proxy',
+    baseUrl: '/.netlify/functions/proxy-api',
     
     // Credenciais de autenticação
     credentials: {
