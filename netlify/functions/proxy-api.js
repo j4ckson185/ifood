@@ -54,9 +54,7 @@ exports.handler = async function(event, context) {
         }
         
         // Prepara os headers para o iFood
-        const headers = {
-            'Content-Type': 'application/json'
-        };
+        const headers = {};
         
         // Copia headers relevantes
         Object.keys(event.headers).forEach(key => {
@@ -70,7 +68,17 @@ exports.handler = async function(event, context) {
             if (lowerKey === 'user-code') {
                 headers['user-code'] = event.headers[key];
             }
+            if (lowerKey === 'content-type') {
+                headers['Content-Type'] = event.headers[key];
+            }
         });
+        
+        // Se não tiver Content-Type, define com base no método
+        if (!headers['Content-Type']) {
+            if (['POST', 'PUT', 'PATCH'].includes(event.httpMethod)) {
+                headers['Content-Type'] = 'application/x-www-form-urlencoded';
+            }
+        }
         
         console.log("Headers para iFood:", headers);
         
