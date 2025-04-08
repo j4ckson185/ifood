@@ -4,32 +4,60 @@
 
 // Inicializa a aplicação quando o DOM estiver carregado
 document.addEventListener('DOMContentLoaded', function() {
-    initApp();
+    // Certifica de que os objetos globais estão definidos antes de usar
+    if (typeof AUTH !== 'undefined' && typeof MERCHANT !== 'undefined' && 
+        typeof ORDERS !== 'undefined' && typeof REVIEWS !== 'undefined') {
+        initApp();
+    } else {
+        console.error("Objetos globais não estão definidos corretamente!");
+        alert("Erro ao inicializar aplicação. Verifique o console para mais detalhes.");
+    }
 });
 
 /**
  * Inicializa a aplicação
  */
 function initApp() {
-    // Inicializa o módulo de autenticação
-    AUTH.init();
-    
-    // Inicializa o módulo de merchant
-    MERCHANT.init();
-    
-    // Inicializa o módulo de pedidos
-    ORDERS.init();
-    
-    // Inicializa o módulo de avaliações
-    REVIEWS.init();
-    
-    // Configura listeners de eventos para UI
-    setupUIEvents();
-    
-    // Carrega dados iniciais após 500ms para garantir que todos os módulos foram inicializados
-    setTimeout(function() {
-        loadInitialData();
-    }, 500);
+    try {
+        // Inicializa o módulo de autenticação
+        if (typeof AUTH.init === 'function') {
+            AUTH.init();
+        } else {
+            console.error("AUTH.init não é uma função!");
+        }
+        
+        // Inicializa o módulo de merchant
+        if (typeof MERCHANT.init === 'function') {
+            MERCHANT.init();
+        } else {
+            console.error("MERCHANT.init não é uma função!");
+        }
+        
+        // Inicializa o módulo de pedidos
+        if (typeof ORDERS.init === 'function') {
+            ORDERS.init();
+        } else {
+            console.error("ORDERS.init não é uma função!");
+        }
+        
+        // Inicializa o módulo de avaliações
+        if (typeof REVIEWS.init === 'function') {
+            REVIEWS.init();
+        } else {
+            console.error("REVIEWS.init não é uma função!");
+        }
+        
+        // Configura listeners de eventos para UI
+        setupUIEvents();
+        
+        // Carrega dados iniciais após 500ms para garantir que todos os módulos foram inicializados
+        setTimeout(function() {
+            loadInitialData();
+        }, 500);
+    } catch (error) {
+        console.error("Erro ao inicializar a aplicação:", error);
+        alert("Erro ao inicializar aplicação: " + error.message);
+    }
 }
 
 /**
