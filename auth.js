@@ -1,5 +1,5 @@
 /**
- * Módulo de autenticação para gerenciar tokens de acesso à API iFood
+ * Módulo de autenticação para gerenciar autenticação distribuída com a API iFood
  */
 
 // Atribuir ao objeto global
@@ -15,6 +15,16 @@ window.AUTH = {
         merchantUuid: '3a9fc83b-ffc3-43e9-aeb6-36c9e827a143'
     },
     
+    // Informações do código de usuário e verificação
+    userCodeInfo: {
+        userCode: '',
+        verificationUrl: '',
+        verificationUrlComplete: '',
+        expiresIn: 0,
+        interval: 0,
+        verifier: '' // Código verificador para usar na obtenção do token
+    },
+
     // Informações do token
     token: {
         access_token: '',
@@ -32,7 +42,6 @@ window.AUTH = {
         if (savedCredentials) {
             try {
                 var parsed = JSON.parse(savedCredentials);
-                // Mescla as credenciais salvas com as credenciais padrão
                 this.credentials = {
                     client_id: parsed.client_id || this.credentials.client_id,
                     client_secret: parsed.client_secret || this.credentials.client_secret,
@@ -59,6 +68,16 @@ window.AUTH = {
                 };
             }
         }
+
+        // Carrega informações do código de usuário do localStorage
+        var savedUserCode = localStorage.getItem('ifood_user_code');
+        if (savedUserCode) {
+            try {
+                this.userCodeInfo = JSON.parse(savedUserCode);
+            } catch (e) {
+                console.error("Erro ao analisar código de usuário salvo:", e);
+            }
+        }
         
         // Atualiza a UI com o ID do merchant
         if (document.getElementById('merchant-id-display')) {
@@ -67,11 +86,206 @@ window.AUTH = {
         
         // Preencher campos do formulário de configurações com valores atuais
         this.updateSettingsForm();
+
+        // Adiciona os botões de autenticação na UI
+        this.addAuthButtons();
+    },
+    
+    // Adiciona botões de autenticação na UI
+    addAuthButtons: function() {
+        const settingsForm = document.querySelector('.settings-form');
+        if (!settingsForm) return;
+
+        const authButtonsHtml = `
+            <div class="auth-buttons" style="margin-top: 20px;">
+                <button id="generate-user-code" class="primary-btn" style="margin-right: 10px;">
+                    Gerar Código de Autenticação
+                </button>
+                <button id="check-auth-status" class="secondary-btn">
+                    Verificar Status da Autenticação
+                </button>
+            </div>
+            <div id="auth-status" style="margin-top: 15px; display: none;">
+                <div class="user-code-info" style="background: #f5f5f5; padding: 15px; border-radius: 5px; margin-bottom: 15px;">
+                    <h4 style="margin-bottom: 10px;">Código de Autenticação</h4>
+                    <p id="user-code-display" style="font-size: 24px; font-weight: bold; margin-bottom: 10px;"></p>
+                    <p style="margin-bottom: 10px;">Acesse o link abaixo e insira o código acima para autorizar o aplicativo:</p>
+                    <a id="verification-url" href="#" target="_blank" style="color: var(--primary);"></a>
+                    <p id="expires-in" style="margin-top: 10px; font-size: 12px;"></p>
+                </div>
+            </div>`;
+
+        // Adiciona os botões após o último botão existente
+        const lastButton = settingsForm.querySelector('button:last-child');
+        if (lastButton) {
+            lastButton.insertAdjacentHTML('afterend', authButtonsHtml);
+        }
+
+        // Adiciona os event listeners
+        document.getElementById('generate-user-code')?.addEventListener('click', () => this.generateUserCode());
+        document.getElementById('check-auth-status')?.addEventListener('click', () => this.checkAuthStatus());
+    },
+
+    // Gera o código de usuário para autenticação
+    generateUserCode: async function() {
+        try {
+            showLoading(true);
+
+            const response = await fetch(this.baseUrl + '/authentication/v1.0/oauth/userCode', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    clientId: this.credentials.client_id
+                })
+            });
+
+            if (!response.ok) {
+                throw new Error('Falha ao gerar código de usuário');
+            }
+
+            const data = await response.json();
+            
+            // Salva as informações do código
+            this.userCodeInfo = {
+                userCode: data.userCode,
+                verificationUrl: data.verificationUrl,
+                verificationUrlComplete: data.verificationUrlComplete,
+                expiresIn: data.expiresIn,
+                interval: data.interval,
+                verifier: data.verifier
+            };
+
+            // Salva no localStorage
+            localStorage.setItem('ifood_user_code', JSON.stringify(this.userCodeInfo));
+
+            // Atualiza a UI
+            this.updateUserCodeUI();
+
+            // Inicia a verificação periódica
+            this.startAuthCheck();
+
+            showToast('success', 'Código de autenticação gerado com sucesso!');
+        } catch (error) {
+            console.error('Erro ao gerar código de usuário:', error);
+            showToast('error', 'Erro ao gerar código de autenticação');
+        } finally {
+            showLoading(false);
+        }
+    },
+
+    // Atualiza a UI com as informações do código de usuário
+    updateUserCodeUI: function() {
+        const authStatus = document.getElementById('auth-status');
+        const userCodeDisplay = document.getElementById('user-code-display');
+        const verificationUrl = document.getElementById('verification-url');
+        const expiresIn = document.getElementById('expires-in');
+
+        if (authStatus && this.userCodeInfo.userCode) {
+            authStatus.style.display = 'block';
+            userCodeDisplay.textContent = this.userCodeInfo.userCode;
+            verificationUrl.href = this.userCodeInfo.verificationUrlComplete;
+            verificationUrl.textContent = this.userCodeInfo.verificationUrl;
+
+            // Calcula o tempo restante
+            const expirationTime = new Date(Date.now() + (this.userCodeInfo.expiresIn * 1000));
+            expiresIn.textContent = `Expira em: ${expirationTime.toLocaleTimeString()}`;
+        }
+    },
+
+    // Inicia a verificação periódica do status da autenticação
+    startAuthCheck: function() {
+        if (this._authCheckInterval) {
+            clearInterval(this._authCheckInterval);
+        }
+
+        this._authCheckInterval = setInterval(() => {
+            this.checkAuthStatus();
+        }, this.userCodeInfo.interval * 1000);
+
+        // Limpa o intervalo após o tempo de expiração
+        setTimeout(() => {
+            if (this._authCheckInterval) {
+                clearInterval(this._authCheckInterval);
+                this._authCheckInterval = null;
+            }
+        }, this.userCodeInfo.expiresIn * 1000);
+    },
+
+    // Verifica o status da autenticação
+    checkAuthStatus: async function() {
+        try {
+            if (!this.userCodeInfo.userCode) {
+                showToast('warning', 'Nenhum código de autenticação ativo');
+                return;
+            }
+
+            const response = await fetch(this.baseUrl + '/authentication/v1.0/oauth/userCode/status', {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'user-code': this.userCodeInfo.userCode
+                }
+            });
+
+            if (!response.ok) {
+                throw new Error('Falha ao verificar status da autenticação');
+            }
+
+            const data = await response.json();
+
+            if (data.status === 'AUTHORIZATION_PENDING') {
+                showToast('info', 'Aguardando autorização do usuário...');
+            } else if (data.status === 'AUTHORIZATION_GRANTED') {
+                // Limpa o intervalo de verificação
+                if (this._authCheckInterval) {
+                    clearInterval(this._authCheckInterval);
+                    this._authCheckInterval = null;
+                }
+
+                // Obtém o token de acesso
+                await this.getTokenWithAuthCode(data.authorizationCode);
+            }
+        } catch (error) {
+            console.error('Erro ao verificar status da autenticação:', error);
+            showToast('error', 'Erro ao verificar status da autenticação');
+        }
+    },
+
+    // Obtém o token de acesso usando o código de autorização
+    getTokenWithAuthCode: async function(authorizationCode) {
+        try {
+            const response = await fetch(this.baseUrl + '/authentication/v1.0/oauth/token', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    grant_type: 'authorization_code',
+                    code: authorizationCode,
+                    client_id: this.credentials.client_id,
+                    client_secret: this.credentials.client_secret,
+                    verifier: this.userCodeInfo.verifier
+                })
+            });
+
+            if (!response.ok) {
+                throw new Error('Falha ao obter token de acesso');
+            }
+
+            const tokenData = await response.json();
+            this.saveToken(tokenData);
+
+            showToast('success', 'Autenticação concluída com sucesso!');
+        } catch (error) {
+            console.error('Erro ao obter token de acesso:', error);
+            showToast('error', 'Erro ao obter token de acesso');
+        }
     },
     
     // Atualiza os campos do formulário de configurações
     updateSettingsForm: function() {
-        // Preenche os campos com as credenciais atuais
         var clientIdInput = document.getElementById('client-id');
         var clientSecretInput = document.getElementById('client-secret');
         var merchantIdInput = document.getElementById('merchant-id-input');
@@ -105,13 +319,9 @@ window.AUTH = {
     
     // Método para verificar expiração do token
     isTokenExpired: function() {
-        // Se não há token, está expirado
         if (!this.token.access_token) return true;
-        
-        // Se não tem data de expiração, considera expirado
         if (!this.token.expires_at) return true;
         
-        // Verifica se está expirado ou vai expirar em breve (15 minutos)
         const currentTime = Date.now();
         const expirationBuffer = 15 * 60 * 1000; // 15 minutos
         
@@ -120,11 +330,10 @@ window.AUTH = {
     
     // Método para salvar o token com tratamento adicional
     saveToken: function(tokenData) {
-        // Calcula o tempo de expiração
         const currentTime = Date.now();
         const expiresIn = tokenData.expires_in 
             ? parseInt(tokenData.expires_in) * 1000  // converte para milissegundos
-            : 3 * 60 * 60 * 1000;  // 3 horas como padrão para modo de teste
+            : 3 * 60 * 60 * 1000;  // 3 horas como padrão
 
         this.token = {
             access_token: tokenData.access_token || '',
@@ -133,250 +342,128 @@ window.AUTH = {
             token_type: tokenData.token_type || 'bearer'
         };
         
-        // Log detalhado de expiração
         console.log(`Token salvo. 
             Expira em: ${new Date(this.token.expires_at).toLocaleString()}
             Tempo restante: ${((this.token.expires_at - currentTime) / 60000).toFixed(2)} minutos`
         );
         
-        // Salva no localStorage
         localStorage.setItem('ifood_token', JSON.stringify(this.token));
     },
     
     // Método para renovar token usando refresh token
-    refreshAccessToken: function() {
-        var self = this;
-        return new Promise(function(resolve, reject) {
-            // Verifica se há um refresh token disponível
-            if (!self.token.refresh_token) {
-                console.log('Sem refresh token. Realizando autenticação completa.');
-                return self.authenticate().then(resolve).catch(reject);
+    refreshAccessToken: async function() {
+        try {
+            if (!this.token.refresh_token) {
+                console.log('Sem refresh token disponível.');
+                throw new Error('Refresh token não disponível');
             }
 
-            console.log('Tentando renovar token com refresh token');
-
-            var formData = new URLSearchParams();
-            formData.append('grant_type', 'refresh_token');
-            formData.append('client_id', self.credentials.client_id);
-            formData.append('client_secret', self.credentials.client_secret);
-            formData.append('refresh_token', self.token.refresh_token);
-            
-            fetch(self.baseUrl + '/oauth/token', {
+            const response = await fetch(this.baseUrl + '/authentication/v1.0/oauth/token', {
                 method: 'POST',
                 headers: {
-                    'Content-Type': 'application/x-www-form-urlencoded'
+                    'Content-Type': 'application/json'
                 },
-                body: formData.toString()
-            })
-            .then(function(response) {
-                if (!response.ok) {
-                    return response.text().then(function(text) {
-                        console.error('Erro ao atualizar token:', text);
-                        throw new Error('Falha ao atualizar token');
-                    });
-                }
-                return response.json();
-            })
-            .then(function(tokenData) {
-                if (!tokenData.access_token) {
-                    throw new Error('Novo token inválido');
-                }
-
-                // Salva o novo token
-                self.saveToken(tokenData);
-                
-                console.log('Token atualizado com sucesso via refresh token');
-                showToast('info', 'Token atualizado automaticamente');
-                
-                resolve(tokenData.access_token);
-            })
-            .catch(function(error) {
-                console.error('Erro no refresh token:', error);
-                
-                // Se falhar, tenta autenticação completa
-                self.authenticate()
-                    .then(resolve)
-                    .catch(reject);
+                body: JSON.stringify({
+                    grant_type: 'refresh_token',
+                    refresh_token: this.token.refresh_token,
+                    client_id: this.credentials.client_id,
+                    client_secret: this.credentials.client_secret
+                })
             });
-        });
+
+            if (!response.ok) {
+                throw new Error('Falha ao atualizar token');
+            }
+
+            const tokenData = await response.json();
+            
+            if (!tokenData.access_token) {
+                throw new Error('Novo token inválido');
+            }
+
+            this.saveToken(tokenData);
+            console.log('Token atualizado com sucesso via refresh token');
+            showToast('info', 'Token atualizado automaticamente');
+            
+            return tokenData.access_token;
+        } catch (error) {
+            console.error('Erro no refresh token:', error);
+            throw error;
+        }
     },
     
     // Obtém um token de acesso
-    getAccessToken: function() {
-        var self = this;
-        return new Promise(function(resolve, reject) {
-            // Verifica se o token está expirado ou próximo de expirar
-            if (self.isTokenExpired()) {
+    getAccessToken: async function() {
+        try {
+            if (this.isTokenExpired()) {
                 console.log('Token expirado ou próximo de expirar. Iniciando renovação.');
                 
-                // Tenta usar refresh token primeiro
-                self.refreshAccessToken()
-                    .then(function(newToken) {
-                        resolve(newToken);
-                    })
-                    .catch(function(err) {
-                        console.error('Falha ao renovar token:', err);
-                        
-                        // Fallback para autenticação completa
-                        self.authenticate()
-                            .then(function() {
-                                resolve(self.token.access_token);
-                            })
-                            .catch(function(authError) {
-                                console.error('Falha na autenticação:', authError);
-                                reject(new Error('Não foi possível obter um token válido'));
-                            });
-                    });
-            } else {
-                // Retorna o token existente se ainda for válido
-                resolve(self.token.access_token);
+                if (this.token.refresh_token) {
+                    return await this.refreshAccessToken();
+                } else {
+                    throw new Error('Necessário nova autenticação');
+                }
             }
-        });
+            
+            return this.token.access_token;
+        } catch (error) {
+            console.error('Erro ao obter token de acesso:', error);
+            throw error;
+        }
     },
     
     // Obtém headers de autenticação
-    getAuthHeaders: function() {
-        var self = this;
-        return this.getAccessToken()
-            .then(function(token) {
-                return {
-                    'Authorization': 'Bearer ' + token,
-                    'Content-Type': 'application/json'
-                };
-            });
-    },
-    
-    // Realiza a autenticação
-    authenticate: function() {
-        var self = this;
-        return new Promise(function(resolve, reject) {
-            try {
-                // Verifica se as credenciais estão presentes
-                if (!self.credentials || !self.credentials.client_id || !self.credentials.client_secret) {
-                    throw new Error('Credenciais incompletas. Configure nas configurações.');
-                }
-                
-                console.log("Iniciando autenticação...");
-                
-                var formData = new URLSearchParams();
-                formData.append('grant_type', 'client_credentials');
-                formData.append('client_id', self.credentials.client_id);
-                formData.append('client_secret', self.credentials.client_secret);
-                
-                fetch(self.baseUrl + '/oauth/token', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/x-www-form-urlencoded'
-                    },
-                    body: formData.toString()
-                })
-                .then(function(response) {
-                    console.log("Resposta de autenticação:", response.status);
-                    
-                    if (!response.ok) {
-                        return response.text().then(function(text) {
-                            console.error("Erro de autenticação:", text);
-                            
-                            let errorDetails;
-                            try {
-                                errorDetails = JSON.parse(text);
-                            } catch {
-                                errorDetails = { message: text || 'Erro desconhecido' };
-                            }
-                            
-                            throw new Error(errorDetails.message || 'Falha na autenticação');
-                        });
-                    }
-                    return response.json();
-                })
-                .then(function(tokenData) {
-                    console.log("Token recebido com sucesso");
-                    
-                    // Validações adicionais do token
-                    if (!tokenData.access_token) {
-                        throw new Error('Token de acesso inválido');
-                    }
-                    
-                    // Salva o token
-                    self.saveToken(tokenData);
-                    
-                    // Mostra notificação de sucesso
-                    showToast('success', 'Autenticação realizada com sucesso!');
-                    
-                    resolve(tokenData);
-                })
-                .catch(function(error) {
-                    console.error('Erro crítico na autenticação:', error);
-                    
-                    // Mostra mensagem de erro
-                    showToast('error', error.message || 'Erro na autenticação');
-                    
-                    reject(error);
-                });
-            } catch (error) {
-                console.error('Erro de configuração na autenticação:', error);
-                showToast('error', error.message || 'Erro de configuração');
-                reject(error);
-            }
-        });
+    getAuthHeaders: async function() {
+        const token = await this.getAccessToken();
+        return {
+            'Authorization': 'Bearer ' + token,
+            'Content-Type': 'application/json'
+        };
     },
     
     // Realiza uma requisição autenticada
-    apiRequest: function(endpoint, options) {
-        var self = this;
-        options = options || {};
-
-        return new Promise(function(resolve, reject) {
-            // Verificação adicional de credenciais
-            if (!self.credentials || !self.credentials.client_id) {
-                console.error('Credenciais não configuradas');
-                return reject(new Error('Credenciais não configuradas. Configure no menu de Configurações.'));
+    apiRequest: async function(endpoint, options = {}) {
+        try {
+            if (!this.credentials || !this.credentials.client_id) {
+                throw new Error('Credenciais não configuradas. Configure no menu de Configurações.');
             }
 
-            self.getAuthHeaders()
-                .then(function(headers) {
-                    var fetchOptions = {
-                        method: options.method || 'GET',
-                        headers: Object.assign({}, headers, options.headers || {})
-                    };
-                    
-                    if (options.body) {
-                        fetchOptions.body = options.body;
-                    }
-                    
-                    console.log("Fazendo requisição para:", endpoint);
-                    console.log("Merchant ID em uso:", self.credentials.merchantId);
-                    
-                    return fetch(self.baseUrl + endpoint, fetchOptions);
-                })
-                .then(function(response) {
-                    // Trata respostas de erro, especialmente 401 (não autorizado)
-                    if (!response.ok) {
-                        if (response.status === 401) {
-                            console.log('Token inválido. Tentando renovar...');
-                            // Força renovação do token e repete a requisição
-                            return self.authenticate()
-                                .then(function() {
-                                    return self.apiRequest(endpoint, options);
-                                });
-                        }
-                        
-                        return response.text().then(function(text) {
-                            console.error("Erro na requisição:", text);
-                            throw new Error(`Erro ${response.status}: ${text}`);
-                        });
-                    }
-                    
-                    // Verifica se a resposta é JSON
-                    const contentType = response.headers.get('content-type');
-                    if (contentType && contentType.includes('application/json')) {
-                        return response.json();
-                    }
-                    
-                    return response.text();
-                })
-                .then(resolve)
-                .catch(reject);
-        });
+            const headers = await this.getAuthHeaders();
+            const fetchOptions = {
+                method: options.method || 'GET',
+                headers: { ...headers, ...(options.headers || {}) }
+            };
+            
+            if (options.body) {
+                fetchOptions.body = options.body;
+            }
+            
+            console.log("Fazendo requisição para:", endpoint);
+            console.log("Merchant ID em uso:", this.credentials.merchantId);
+            
+            const response = await fetch(this.baseUrl + endpoint, fetchOptions);
+
+            if (!response.ok) {
+                if (response.status === 401) {
+                    // Se o token expirou, tenta renovar e refaz a requisição
+                    await this.refreshAccessToken();
+                    return this.apiRequest(endpoint, options);
+                }
+                
+                const text = await response.text();
+                throw new Error(`Erro ${response.status}: ${text}`);
+            }
+            
+            // Verifica se a resposta é JSON
+            const contentType = response.headers.get('content-type');
+            if (contentType && contentType.includes('application/json')) {
+                return response.json();
+            }
+            
+            return response.text();
+        } catch (error) {
+            console.error('Erro na requisição:', error);
+            throw error;
+        }
     }
 };
