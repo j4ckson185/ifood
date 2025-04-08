@@ -4,6 +4,7 @@ const fetch = require('node-fetch');
 exports.handler = async function(event, context) {
     // URLs base da API do iFood
     const IFOOD_API_BASE = 'https://merchant-api.ifood.com.br';
+    const IFOOD_AUTH_BASE = 'https://merchant-api.ifood.com.br/authentication/v1.0';
     
     console.log("Requisição recebida:", {
         path: event.path,
@@ -43,9 +44,13 @@ exports.handler = async function(event, context) {
         
         // URL completa para a API - trata caminhos especiais
         let url;
-        if (apiPath.includes('/oauth/')) {
-            // Todos os endpoints de autenticação
-            url = `${IFOOD_API_BASE}/authentication/v1.0${apiPath}`;
+        if (apiPath.startsWith('/authentication/')) {
+            // Remove o prefixo '/authentication/' pois já está incluído na URL base de autenticação
+            const authPath = apiPath.replace('/authentication/', '');
+            url = `${IFOOD_AUTH_BASE}/${authPath}`;
+            console.log("URL para API de autenticação iFood:", url);
+        } else if (apiPath.includes('/oauth/')) {
+            url = `${IFOOD_AUTH_BASE}${apiPath}`;
             console.log("URL para API de autenticação iFood:", url);
         } else {
             url = `${IFOOD_API_BASE}${apiPath}`;
