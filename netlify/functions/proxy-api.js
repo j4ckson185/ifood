@@ -45,7 +45,7 @@ exports.handler = async function(event, context) {
         
         // URL completa para a API
         let url;
-        if (apiPath.includes('/oauth/')) {
+        if (apiPath.startsWith('/oauth/')) {
             url = `${IFOOD_API_BASE}/authentication/v1.0${apiPath}`;
             console.log("URL para API de autenticação iFood:", url);
         } else {
