@@ -47,7 +47,7 @@ const ORDERS = {
     /**
      * Inicializa o módulo de pedidos
      */
-    init() {
+    init: function() {
         // Carrega dados de pedidos do localStorage (se existirem)
         this.loadSavedOrders();
         
@@ -61,7 +61,7 @@ const ORDERS = {
     /**
      * Carrega pedidos salvos no localStorage
      */
-    loadSavedOrders() {
+    loadSavedOrders: function() {
         const savedOrders = localStorage.getItem('orders_data');
         if (savedOrders) {
             try {
@@ -82,7 +82,7 @@ const ORDERS = {
     /**
      * Salva os pedidos no localStorage
      */
-    saveOrdersData() {
+    saveOrdersData: function() {
         const data = {
             orders: this.orders,
             processedEvents: this.processedEvents,
@@ -95,7 +95,7 @@ const ORDERS = {
     /**
      * Inicializa eventos de UI relacionados a pedidos
      */
-    initUIEvents() {
+    initUIEvents: function() {
         // Botão de atualizar pedidos no dashboard
         const refreshOrdersBtn = document.getElementById('refresh-orders');
         if (refreshOrdersBtn) {
@@ -152,7 +152,7 @@ const ORDERS = {
     /**
      * Configura os listeners para o modal de detalhes do pedido
      */
-    setupOrderModalListeners() {
+    setupOrderModalListeners: function() {
         // Botão de confirmar pedido
         const confirmOrderBtn = document.getElementById('modal-confirm-order');
         if (confirmOrderBtn) {
@@ -207,7 +207,7 @@ const ORDERS = {
     /**
      * Configura os listeners para o modal de cancelamento
      */
-    setupCancelModalListeners() {
+    setupCancelModalListeners: function() {
         // Botão de confirmar cancelamento
         const confirmCancelBtn = document.getElementById('confirm-cancel');
         if (confirmCancelBtn) {
@@ -223,7 +223,7 @@ const ORDERS = {
     /**
      * Inicia o polling para receber eventos de pedidos (Critério: Receber eventos via polling)
      */
-    startPolling() {
+    startPolling: function() {
         // Se já existe um intervalo, não cria outro
         if (this.pollingInterval) return;
         
@@ -241,7 +241,7 @@ const ORDERS = {
     /**
      * Para o polling de eventos
      */
-    stopPolling() {
+    stopPolling: function() {
         if (this.pollingInterval) {
             clearInterval(this.pollingInterval);
             this.pollingInterval = null;
@@ -249,58 +249,58 @@ const ORDERS = {
         }
     },
     
-/**
- * Faz uma chamada de polling para verificar novos eventos
- */
-async pollForEvents() {
-    try {
-        if (!this.pollingEnabled) return;
-        
-        console.log('Verificando novos eventos...');
-        this.lastPollTime = new Date();
-        
-        // Define o merchant ID para o header de filtragem
-        const merchantId = AUTH.credentials.merchantId;
-        if (!merchantId) {
-            throw new Error('ID do merchant não configurado');
-        }
-        
-        // Faz a requisição de polling com o header x-polling-merchants
-        let events;
+    /**
+     * Faz uma chamada de polling para verificar novos eventos (Critério: Receber eventos via polling)
+     */
+    pollForEvents: async function() {
         try {
-            events = await AUTH.apiRequest('/polling', {
-                headers: {
-                    'x-polling-merchants': merchantId
-                }
-            });
+            if (!this.pollingEnabled) return;
+            
+            console.log('Verificando novos eventos...');
+            this.lastPollTime = new Date();
+            
+            // Define o merchant ID para o header de filtragem
+            const merchantId = AUTH.credentials.merchantId;
+            if (!merchantId) {
+                throw new Error('ID do merchant não configurado');
+            }
+            
+            // Faz a requisição de polling com o header x-polling-merchants
+            let events;
+            try {
+                events = await AUTH.apiRequest('/polling', {
+                    headers: {
+                        'x-polling-merchants': merchantId
+                    }
+                });
+            } catch (error) {
+                console.warn('Erro no polling, tentando continuar:', error);
+                return; // Continua a execução mesmo com erro
+            }
+            
+            // Se a resposta for nula ou indefinida, considera como vazia
+            if (!events) {
+                console.log('Nenhum evento encontrado no polling.');
+                return;
+            }
+            
+            console.log('Eventos recebidos:', events);
+            
+            // Processa os eventos recebidos
+            if (events && Array.isArray(events) && events.length > 0) {
+                await this.processEvents(events);
+            }
         } catch (error) {
-            console.warn('Erro no polling, tentando continuar:', error);
-            return; // Continua a execução mesmo com erro
+            console.error('Erro no polling de eventos:', error);
+            // Não propaga o erro para permitir que o polling continue
         }
-        
-        // Se a resposta for nula ou indefinida, considera como vazia
-        if (!events) {
-            console.log('Nenhum evento encontrado no polling.');
-            return;
-        }
-        
-        console.log('Eventos recebidos:', events);
-        
-        // Processa os eventos recebidos
-        if (events && Array.isArray(events) && events.length > 0) {
-            await this.processEvents(events);
-        }
-    } catch (error) {
-        console.error('Erro no polling de eventos:', error);
-        // Não propaga o erro para permitir que o polling continue
-    }
-}
+    },
     
     /**
      * Processa os eventos recebidos do polling
      * @param {Array} events Lista de eventos para processar
      */
-    async processEvents(events) {
+    processEvents: async function(events) {
         if (!events || events.length === 0) return;
         
         // IDs de eventos que precisam de acknowledgment
@@ -342,7 +342,7 @@ async pollForEvents() {
      * Envia acknowledgment para os eventos processados (Critério: Enviar acknowledgment)
      * @param {Array} eventIds Lista de IDs de eventos para enviar ack
      */
-    async sendAcknowledgment(eventIds) {
+    sendAcknowledgment: async function(eventIds) {
         try {
             if (!eventIds || eventIds.length === 0) return;
             
@@ -372,7 +372,7 @@ async pollForEvents() {
      * Lida com um evento específico com base no seu código
      * @param {Object} event Evento a ser tratado
      */
-    async handleEvent(event) {
+    handleEvent: async function(event) {
         try {
             console.log(`Processando evento: ${event.code} (ID: ${event.id})`);
             
@@ -432,7 +432,7 @@ async pollForEvents() {
     /**
      * Busca todos os pedidos ativos
      */
-    async fetchOrders() {
+    fetchOrders: async function() {
         try {
             showLoading(true);
             
@@ -458,7 +458,7 @@ async pollForEvents() {
      * Busca detalhes de um pedido específico
      * @param {string} orderId ID do pedido
      */
-    async fetchOrderDetails(orderId) {
+    fetchOrderDetails: async function(orderId) {
         try {
             // Na API real, você buscaria os detalhes do pedido no endpoint específico
             // Para fins de demonstração, vamos verificar se já temos o pedido na lista
@@ -485,7 +485,7 @@ async pollForEvents() {
      * @param {string} orderId ID do pedido
      * @param {string} newStatus Novo status
      */
-    updateOrderStatus(orderId, newStatus) {
+    updateOrderStatus: function(orderId, newStatus) {
         // Busca o pedido na lista
         const orderIndex = this.orders.findIndex(o => o.id === orderId);
         if (orderIndex === -1) return;
@@ -505,7 +505,7 @@ async pollForEvents() {
      * Confirma um pedido (Critério: Receber, confirmar e despachar pedido)
      * @param {string} orderId ID do pedido
      */
-    async confirmOrder(orderId) {
+    confirmOrder: async function(orderId) {
         try {
             showLoading(true);
             
@@ -529,7 +529,7 @@ async pollForEvents() {
      * Despacha um pedido (Critério: Receber, confirmar e despachar pedido)
      * @param {string} orderId ID do pedido
      */
-    async dispatchOrder(orderId) {
+    dispatchOrder: async function(orderId) {
         try {
             showLoading(true);
             
@@ -553,7 +553,7 @@ async pollForEvents() {
      * Marca um pedido como pronto para retirada (Critério: Pedidos Pra Retirar)
      * @param {string} orderId ID do pedido
      */
-    async setOrderReady(orderId) {
+    setOrderReady: async function(orderId) {
         try {
             showLoading(true);
             
@@ -576,7 +576,7 @@ async pollForEvents() {
     /**
      * Busca as razões de cancelamento disponíveis (Critério: Cancelamento de pedidos)
      */
-    async fetchCancellationReasons() {
+    fetchCancellationReasons: async function() {
         try {
             // Na API real, você buscaria os motivos no endpoint /cancellationReasons
             // Para fins de demonstração, vamos retornar alguns motivos padrão
@@ -598,7 +598,7 @@ async pollForEvents() {
      * Exibe o modal de cancelamento com as razões disponíveis
      * @param {string} orderId ID do pedido
      */
-    async showCancellationModal(orderId) {
+    showCancellationModal: async function(orderId) {
         try {
             // Busca as razões de cancelamento
             const reasons = await this.fetchCancellationReasons();
@@ -632,7 +632,7 @@ async pollForEvents() {
      * @param {string} orderId ID do pedido
      * @param {string} reasonCode Código do motivo de cancelamento
      */
-    async cancelOrder(orderId, reasonCode) {
+    cancelOrder: async function(orderId, reasonCode) {
         try {
             showLoading(true);
             
@@ -657,7 +657,7 @@ async pollForEvents() {
      * Imprime os detalhes do pedido (Critério: Exibir na tela e/ou comanda impressa)
      * @param {Object} order Pedido a ser impresso
      */
-    printOrder(order) {
+    printOrder: function(order) {
         try {
             if (!order) return;
             
@@ -837,7 +837,7 @@ async pollForEvents() {
                     
                     <div class="divider"></div>
                     
-                    <div class="footer">
+<div class="footer">
                         Pedido recebido via iFood<br>
                         Obrigado pela preferência!
                     </div>
@@ -863,17 +863,17 @@ async pollForEvents() {
     /**
      * Fecha o modal de detalhes do pedido
      */
-    closeOrderModal() {
+    closeOrderModal: function() {
         const modal = document.getElementById('order-details-modal');
         if (modal) {
             modal.classList.remove('active');
         }
     },
-
-/**
+    
+    /**
      * Fecha o modal de cancelamento
      */
-    closeCancelModal() {
+    closeCancelModal: function() {
         const modal = document.getElementById('cancel-order-modal');
         if (modal) {
             modal.classList.remove('active');
@@ -883,7 +883,7 @@ async pollForEvents() {
     /**
      * Simula alguns pedidos para demonstração
      */
-    simulateOrders() {
+    simulateOrders: function() {
         // Array de pedidos simulados
         const demoOrders = [
             this.createSimulatedOrder('order_1', 'PENDING', 'DELIVERY', 'IMMEDIATE'),
@@ -905,7 +905,7 @@ async pollForEvents() {
      * @param {string} orderTiming Tempo do pedido (opcional)
      * @returns {Object} Pedido simulado
      */
-    createSimulatedOrder(id, status = 'PENDING', orderType = 'DELIVERY', orderTiming = 'IMMEDIATE') {
+    createSimulatedOrder: function(id, status = 'PENDING', orderType = 'DELIVERY', orderTiming = 'IMMEDIATE') {
         // Incrementa o contador de pedidos
         const orderNumber = `${100000 + this.orderIdCounter++}`;
         
@@ -1018,11 +1018,11 @@ async pollForEvents() {
         };
     },
 
- /**
+    /**
      * Exibe os detalhes de um pedido no modal
      * @param {string} orderId ID do pedido a ser exibido
      */
-    showOrderDetails(orderId) {
+    showOrderDetails: function(orderId) {
         // Busca o pedido
         const order = this.orders.find(o => o.id === orderId);
         if (!order) return;
@@ -1128,7 +1128,7 @@ async pollForEvents() {
                     itemsContainer.appendChild(itemElem);
                 });
             } else {
-itemsContainer.innerHTML = '<p>Nenhum item encontrado.</p>';
+                itemsContainer.innerHTML = '<p>Nenhum item encontrado.</p>';
             }
         }
         
@@ -1208,7 +1208,7 @@ itemsContainer.innerHTML = '<p>Nenhum item encontrado.</p>';
      * Atualiza os botões de ação no modal com base no status do pedido
      * @param {Object} order Pedido atual
      */
-    updateOrderActionButtons(order) {
+    updateOrderActionButtons: function(order) {
         const confirmBtn = document.getElementById('modal-confirm-order');
         const dispatchBtn = document.getElementById('modal-dispatch-order');
         const readyBtn = document.getElementById('modal-ready-order');
@@ -1253,7 +1253,7 @@ itemsContainer.innerHTML = '<p>Nenhum item encontrado.</p>';
     /**
      * Atualiza a UI com os pedidos
      */
-    updateOrdersUI() {
+    updateOrdersUI: function() {
         // Atualiza os cards de pedidos no dashboard
         this.updateDashboardOrdersUI();
         
@@ -1264,7 +1264,7 @@ itemsContainer.innerHTML = '<p>Nenhum item encontrado.</p>';
     /**
      * Atualiza os cards de pedidos na dashboard
      */
-    updateDashboardOrdersUI() {
+    updateDashboardOrdersUI: function() {
         const ordersContainer = document.getElementById('orders-container');
         if (!ordersContainer) return;
         
@@ -1285,7 +1285,7 @@ itemsContainer.innerHTML = '<p>Nenhum item encontrado.</p>';
             return;
         }
         
-// Cria os cards para cada pedido
+        // Cria os cards para cada pedido
         recentOrders.forEach(order => {
             this.createOrderCard(order, ordersContainer);
         });
@@ -1294,7 +1294,7 @@ itemsContainer.innerHTML = '<p>Nenhum item encontrado.</p>';
     /**
      * Atualiza a lista completa de pedidos
      */
-    updateOrdersListUI() {
+    updateOrdersListUI: function() {
         const ordersListContainer = document.getElementById('orders-list-container');
         if (!ordersListContainer) return;
         
@@ -1393,7 +1393,7 @@ itemsContainer.innerHTML = '<p>Nenhum item encontrado.</p>';
      * @param {string} filter Filtro aplicado
      * @returns {Array} Lista de pedidos filtrados
      */
-    filterOrders(orders, filter) {
+    filterOrders: function(orders, filter) {
         switch (filter) {
             case 'pending':
                 return orders.filter(o => o.status === 'PENDING');
@@ -1416,12 +1416,241 @@ itemsContainer.innerHTML = '<p>Nenhum item encontrado.</p>';
      * @param {Object} order Pedido a ser exibido
      * @param {HTMLElement} container Container onde o card será adicionado
      */
-    createOrderCard(order, container) {
+    createOrderCard: function(order, container) {
         // Cria o elemento do card
         const card = document.createElement('div');
         card.className = 'order-card';
         card.dataset.id = order.id;
         
-return `${street}, ${number} - ${neighborhood}, ${cities[cityIndex]} - ${states[cityIndex]}`;
+        // Formata a data
+        const date = new Date(order.createdAt);
+        const formattedTime = date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        
+        // HTML do card
+        card.innerHTML = `
+            <div class="order-card-header">
+                <div class="order-id">#${order.orderNumber}</div>
+                <div class="order-time">${formattedTime}</div>
+            </div>
+            <div class="order-card-body">
+                <div class="order-type-info">
+                    <div class="order-type">
+                        <i class="fas ${order.orderType === 'DELIVERY' ? 'fa-motorcycle' : 'fa-shopping-bag'}"></i>
+                        ${order.orderType === 'DELIVERY' ? 'Entrega' : 'Retirada'}
+                        ${order.orderTiming === 'SCHEDULED' ? ' <span class="scheduled">(Agendado)</span>' : ''}
+                    </div>
+                    <div class="order-price">R$ ${(order.total/100).toFixed(2)}</div>
+                </div>
+                <div class="order-customer">
+                    <div class="customer-name">${order.customer?.name || '-'}</div>
+                    ${order.orderType === 'DELIVERY' && order.delivery?.deliveryAddress ? 
+                        `<div class="customer-address">${order.delivery.deliveryAddress.formattedAddress}</div>` : ''}
+                </div>
+                <div class="order-items">
+                    <div class="items-title">Itens:</div>
+                    <div class="items-list">
+                        ${order.items?.map(item => `${item.quantity}x ${item.name}`).join(', ') || 'Nenhum item'}
+                    </div>
+                </div>
+            </div>
+            <div class="order-card-footer">
+                <div class="order-status ${order.status.toLowerCase()}">${this.getStatusText(order.status)}</div>
+                <button class="order-detail-btn" data-id="${order.id}">Ver detalhes</button>
+            </div>
+        `;
+        
+        // Adiciona o card ao container
+        container.appendChild(card);
+        
+        // Adiciona evento de clique para exibir detalhes
+        const detailBtn = card.querySelector('.order-detail-btn');
+        if (detailBtn) {
+            detailBtn.addEventListener('click', () => {
+                this.showOrderDetails(order.id);
+            });
+        }
+        
+        // Adiciona evento de clique para o card inteiro
+        card.addEventListener('click', (e) => {
+            // Ignora clique se foi no botão de detalhes (já tratado acima)
+            if (e.target.closest('.order-detail-btn')) return;
+            
+            this.showOrderDetails(order.id);
+        });
+    },
+    
+    /**
+     * Atualiza as estatísticas de pedidos no dashboard
+     */
+    updateOrdersStats: function() {
+        // Total de pedidos hoje
+        const totalOrdersElem = document.getElementById('total-orders');
+        if (totalOrdersElem) {
+            // Filtra pedidos de hoje
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            
+            const todayOrders = this.orders.filter(o => {
+                const orderDate = new Date(o.createdAt);
+                return orderDate >= today;
+            });
+            
+            totalOrdersElem.textContent = todayOrders.length;
+        }
+        
+        // Faturamento total
+        const totalRevenueElem = document.getElementById('total-revenue');
+        if (totalRevenueElem) {
+            // Calcula faturamento (soma dos totais dos pedidos concluídos)
+            const revenue = this.orders
+                .filter(o => ['CONCLUDED', 'DISPATCHED', 'READY'].includes(o.status))
+                .reduce((total, order) => total + order.total, 0);
+            
+            totalRevenueElem.textContent = `R$ ${(revenue/100).toFixed(2)}`;
+        }
+        
+        // Avaliação média (simulada)
+        const avgRatingElem = document.getElementById('avg-rating');
+        if (avgRatingElem) {
+            avgRatingElem.textContent = '4.8';
+        }
+        
+        // Tempo médio de preparo (simulado)
+        const avgTimeElem = document.getElementById('avg-time');
+        if (avgTimeElem) {
+            avgTimeElem.textContent = '28 min';
+        }
+    },
+    
+    /**
+     * Toca o som de notificação para novos pedidos
+     */
+    playNewOrderSound: function() {
+        // Verifica se o som está habilitado
+        const soundEnabled = document.getElementById('sound-alert')?.checked !== false;
+        
+        if (soundEnabled) {
+            const sound = document.getElementById('new-order-sound');
+            if (sound) {
+                sound.play().catch(e => console.log('Não foi possível reproduzir o som:', e));
+            }
+        }
+    },
+    
+    /**
+     * Obtém o texto do status para exibição
+     * @param {string} status Status do pedido
+     * @returns {string} Texto do status
+     */
+    getStatusText: function(status) {
+        switch (status) {
+            case 'PENDING':
+                return 'Pendente';
+            case 'CONFIRMED':
+                return 'Confirmado';
+            case 'DISPATCHED':
+                return 'Despachado';
+            case 'READY':
+                return 'Pronto para Retirada';
+            case 'CONCLUDED':
+                return 'Concluído';
+            case 'CANCELLED':
+                return 'Cancelado';
+            default:
+                return status;
+        }
+    },
+    
+    /**
+     * Obtém o texto do método de pagamento para exibição
+     * @param {Array} payments Pagamentos do pedido
+     * @returns {string} Texto do método de pagamento
+     */
+    getPaymentMethodText: function(payments) {
+        if (!payments || payments.length === 0) return 'Não informado';
+        
+        const payment = payments[0];
+        
+        // Métodos de pagamento
+        switch (payment.method) {
+            case 'CREDIT':
+                return `Cartão de Crédito ${payment.brand ? `(${payment.brand})` : ''}`;
+            case 'DEBIT':
+                return `Cartão de Débito ${payment.brand ? `(${payment.brand})` : ''}`;
+            case 'CASH':
+                return 'Dinheiro';
+            case 'MEAL_VOUCHER':
+                return 'Vale Refeição';
+            case 'FOOD_VOUCHER':
+                return 'Vale Alimentação';
+            case 'PIX':
+                return 'Pix';
+            default:
+                return payment.method;
+        }
+    },
+    
+    /**
+     * Gera um nome de cliente aleatório para simulação
+     * @returns {string} Nome aleatório
+     */
+    getRandomCustomerName: function() {
+        const firstNames = ['Maria', 'João', 'Ana', 'Pedro', 'Lucas', 'Julia', 'Carlos', 'Fernanda', 'Rafael', 'Mariana'];
+        const lastNames = ['Silva', 'Santos', 'Oliveira', 'Souza', 'Lima', 'Costa', 'Pereira', 'Carvalho', 'Almeida', 'Rodrigues'];
+        
+        const firstName = firstNames[Math.floor(Math.random() * firstNames.length)];
+        const lastName = lastNames[Math.floor(Math.random() * lastNames.length)];
+        
+        return `${firstName} ${lastName}`;
+    },
+    
+    /**
+     * Gera um número de telefone aleatório para simulação
+     * @returns {string} Telefone aleatório
+     */
+    generateRandomPhone: function() {
+        const ddd = Math.floor(Math.random() * 89) + 11; // DDDs entre 11 e 99
+        const part1 = Math.floor(Math.random() * 9000) + 1000; // 4 dígitos
+        const part2 = Math.floor(Math.random() * 9000) + 1000; // 4 dígitos
+        
+        return `(${ddd}) 9${part1}-${part2}`;
+    },
+    
+    /**
+     * Gera um CPF aleatório para simulação
+     * @returns {string} CPF aleatório formatado
+     */
+    generateRandomCPF: function() {
+        const n1 = Math.floor(Math.random() * 10);
+        const n2 = Math.floor(Math.random() * 10);
+        const n3 = Math.floor(Math.random() * 10);
+        const n4 = Math.floor(Math.random() * 10);
+        const n5 = Math.floor(Math.random() * 10);
+        const n6 = Math.floor(Math.random() * 10);
+        const n7 = Math.floor(Math.random() * 10);
+        const n8 = Math.floor(Math.random() * 10);
+        const n9 = Math.floor(Math.random() * 10);
+        
+        // Apenas para formatação, não é um CPF válido com dígitos verificadores corretos
+        return `${n1}${n2}${n3}.${n4}${n5}${n6}.${n7}${n8}${n9}-00`;
+    },
+    
+    /**
+     * Gera um endereço aleatório para simulação
+     * @returns {string} Endereço aleatório
+     */
+    getRandomAddress: function() {
+        const streets = ['Rua das Flores', 'Av. Paulista', 'Rua Augusta', 'Alameda Santos', 'Rua Oscar Freire', 'Av. Brigadeiro Faria Lima'];
+        const numbers = [123, 456, 789, 1000, 2500, 360, 720];
+        const neighborhoods = ['Centro', 'Jardins', 'Pinheiros', 'Vila Madalena', 'Moema', 'Itaim Bibi'];
+        const cities = ['São Paulo', 'Rio de Janeiro', 'Belo Horizonte', 'Curitiba', 'Porto Alegre'];
+        const states = ['SP', 'RJ', 'MG', 'PR', 'RS'];
+        
+        const street = streets[Math.floor(Math.random() * streets.length)];
+        const number = numbers[Math.floor(Math.random() * numbers.length)];
+        const neighborhood = neighborhoods[Math.floor(Math.random() * neighborhoods.length)];
+        const cityIndex = Math.floor(Math.random() * cities.length);
+        
+        return `${street}, ${number} - ${neighborhood}, ${cities[cityIndex]} - ${states[cityIndex]}`;
     }
 };
