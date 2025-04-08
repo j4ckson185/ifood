@@ -1,59 +1,28 @@
 import { API_BASE_URL } from './config.js';
 
-async function fazerRequisicaoAPI(endpoint, metodo = 'GET', corpo = null) {
+export async function obterTokenAutenticacao() {
     try {
-        const opcoes = {
-            method: metodo,
+        // Use o token direto se já tiver sido obtido anteriormente
+        if (window.AUTH && window.AUTH.token && window.AUTH.token.access_token) {
+            return window.AUTH.token.access_token;
+        }
+
+        const response = await fetch(`${API_BASE_URL}/oauth/token`, {
+            method: 'POST',
             headers: {
-                'Content-Type': 'application/json',
+                'Content-Type': 'application/x-www-form-urlencoded'
             },
-        };
+            body: 'grant_type=client_credentials&client_id=e6415912-782e-4bd9-b6ea-af48c81ae323'
+        });
 
-        if (corpo) {
-            opcoes.body = JSON.stringify(corpo);
+        if (!response.ok) {
+            throw new Error(`Falha na autenticação: ${response.status} ${response.statusText}`);
         }
 
-        console.log(`Fazendo requisição para ${API_BASE_URL}${endpoint}`, opcoes);
-        const resposta = await fetch(`${API_BASE_URL}${endpoint}`, opcoes);
-        
-        const texto = await resposta.text();
-        console.log(`Resposta da API (${resposta.status}):`, texto);
-
-        if (!resposta.ok) {
-            throw new Error(`Erro na API: ${resposta.status} ${resposta.statusText}\nResposta: ${texto}`);
-        }
-
-        return texto ? JSON.parse(texto) : null;
+        const data = await response.json();
+        return data.access_token;
     } catch (error) {
-        console.error(`Erro ao fazer requisição para ${endpoint}:`, error);
+        console.error('Erro ao obter token:', error);
         throw error;
     }
-}
-
-export async function polling() {
-    return fazerRequisicaoAPI('/events/v1.0/events:polling');
-}
-
-export async function acknowledgeEventos(eventIds) {
-    return fazerRequisicaoAPI('/events/v1.0/events/acknowledgment', 'POST', eventIds);
-}
-
-export async function obterDetalhesPedido(orderId) {
-    return fazerRequisicaoAPI(`/order/v1.0/orders/${orderId}`);
-}
-
-export async function confirmarPedido(orderId) {
-    return fazerRequisicaoAPI(`/order/v1.0/orders/${orderId}/confirm`, 'POST');
-}
-
-export async function despacharPedido(orderId) {
-    return fazerRequisicaoAPI(`/order/v1.0/orders/${orderId}/dispatch`, 'POST');
-}
-
-export async function obterMotivoCancelamento(orderId) {
-    return fazerRequisicaoAPI(`/order/v1.0/orders/${orderId}/cancellationReasons`);
-}
-
-export async function cancelarPedido(orderId, cancelCodeId) {
-    return fazerRequisicaoAPI(`/order/v1.0/orders/${orderId}/requestCancellation`, 'POST', { cancellationCode: cancelCodeId });
 }
