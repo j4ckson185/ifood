@@ -1,3 +1,6 @@
+import { obterTokenAutenticacao } from './auth.js';
+import { polling, acknowledgeEventos } from './api.js';
+
 /**
  * Arquivo principal que inicializa a aplicação
  */
@@ -41,30 +44,29 @@ document.addEventListener('DOMContentLoaded', function() {
     initApp();
 });
 
-function initApp() {
+async function initApp() {
     try {
-        console.log("Iniciando aplicação...");
+        console.log('Inicializando aplicativo...');
         
-        // Inicializa os módulos
-        window.AUTH.init();
-        window.MERCHANT.init();
-        window.ORDERS.init();
-        window.REVIEWS.init();
-        
-        // Configura listeners de eventos para UI
-        setupUIEvents();
-        
-        // Carrega dados iniciais após 500ms
-        setTimeout(function() {
-            loadInitialData();
-        }, 500);
-        
-        console.log("Aplicação iniciada com sucesso!");
+        // Verificar se os módulos necessários estão disponíveis
+        if (typeof obterTokenAutenticacao !== 'function' || 
+            typeof polling !== 'function' || 
+            typeof acknowledgeEventos !== 'function') {
+            throw new Error('Módulos não carregados corretamente');
+        }
+
+        await fazerPolling();
+        setInterval(fazerPolling, 30000);
     } catch (error) {
-        console.error("Erro ao inicializar a aplicação:", error);
-        alert("Erro ao inicializar aplicação: " + error.message);
+        console.error('Erro ao inicializar o app:', error);
+        alert('Erro ao inicializar o aplicativo. Por favor, verifique o console e tente novamente.');
     }
 }
+
+document.addEventListener('DOMContentLoaded', () => {
+    initApp();
+    inicializarTabs();
+});
 
 /**
  * Configura eventos de UI globais
