@@ -256,7 +256,7 @@
                         <h2>Configurações</h2>
                     </div>
 
-                    <div class="settings-card">
+<div class="settings-card">
                         <h3>Configurações de API</h3>
                         <div class="settings-form">
                             <div class="form-group">
@@ -276,6 +276,28 @@
                                 <input type="text" id="merchant-uuid-input" placeholder="UUID da Loja" value="3a9fc83b-ffc3-43e9-aeb6-36c9e827a143">
                             </div>
                             <button id="save-settings" class="primary-btn">Salvar Configurações</button>
+                            
+                            <!-- Nova seção de Autenticação -->
+                            <div class="auth-section" style="margin-top: 30px; padding-top: 20px; border-top: 1px solid var(--border);">
+                                <h3 style="margin-bottom: 15px;">Autenticação iFood</h3>
+                                <div class="auth-buttons">
+                                    <button id="generate-user-code" class="primary-btn" style="margin-right: 10px;">
+                                        Gerar Código de Autenticação
+                                    </button>
+                                    <button id="check-auth-status" class="secondary-btn">
+                                        Verificar Status da Autenticação
+                                    </button>
+                                </div>
+                                <div id="auth-status" style="margin-top: 15px; display: none;">
+                                    <div class="user-code-info" style="background: #f5f5f5; padding: 15px; border-radius: 5px; margin-bottom: 15px;">
+                                        <h4 style="margin-bottom: 10px;">Código de Autenticação</h4>
+                                        <p id="user-code-display" style="font-size: 24px; font-weight: bold; margin-bottom: 10px;"></p>
+                                        <p style="margin-bottom: 10px;">Acesse o link abaixo e insira o código acima para autorizar o aplicativo:</p>
+                                        <a id="verification-url" href="#" target="_blank" style="color: var(--primary);"></a>
+                                        <p id="expires-in" style="margin-top: 10px; font-size: 12px;"></p>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
 
