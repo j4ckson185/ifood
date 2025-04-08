@@ -1,13 +1,16 @@
 // netlify/functions/proxy-api.js
+const fetch = require('node-fetch');
+
 exports.handler = async function(event, context) {
   // URLs base da API do iFood
   const IFOOD_API_BASE = 'https://merchant-api.ifood.com.br';
   
-  // Log para depuração
+  // Log para depuração completa
   console.log("Requisição recebida:", {
     path: event.path,
     httpMethod: event.httpMethod,
-    body: event.body // Log do corpo da requisição
+    headers: event.headers,
+    body: event.body
   });
   
   // Tratamento de CORS para preflight
@@ -81,22 +84,16 @@ exports.handler = async function(event, context) {
     };
     
     // Para métodos com body, adiciona o body
-    // Para oauth/token, garante que o grant_type esteja presente
     if (['POST', 'PUT', 'PATCH'].includes(event.httpMethod)) {
-      if (event.body) {
-        // Para token, adiciona grant_type se não estiver presente
-        if (apiPath.includes('/oauth/token')) {
-          const bodyParams = new URLSearchParams(event.body);
-          if (!bodyParams.get('grant_type')) {
-            bodyParams.set('grant_type', 'client_credentials');
-          }
-          options.body = bodyParams.toString();
-        } else {
-          options.body = event.body;
+      if (apiPath.includes('/oauth/token')) {
+        // Garante que o grant_type seja incluído
+        const bodyParams = new URLSearchParams(event.body || '');
+        if (!bodyParams.get('grant_type')) {
+          bodyParams.set('grant_type', 'client_credentials');
         }
-      } else if (apiPath.includes('/oauth/token')) {
-        // Se não há body, cria um com grant_type
-        options.body = 'grant_type=client_credentials';
+        options.body = bodyParams.toString();
+      } else if (event.body) {
+        options.body = event.body;
       }
     }
     
