@@ -87,41 +87,7 @@ window.AUTH = {
         // Preencher campos do formulário de configurações com valores atuais
         this.updateSettingsForm();
 
-        // Adiciona os botões de autenticação na UI
-        this.addAuthButtons();
-    },
-    
-    // Adiciona botões de autenticação na UI
-    addAuthButtons: function() {
-        const settingsForm = document.querySelector('.settings-form');
-        if (!settingsForm) return;
-
-        const authButtonsHtml = `
-            <div class="auth-buttons" style="margin-top: 20px;">
-                <button id="generate-user-code" class="primary-btn" style="margin-right: 10px;">
-                    Gerar Código de Autenticação
-                </button>
-                <button id="check-auth-status" class="secondary-btn">
-                    Verificar Status da Autenticação
-                </button>
-            </div>
-            <div id="auth-status" style="margin-top: 15px; display: none;">
-                <div class="user-code-info" style="background: #f5f5f5; padding: 15px; border-radius: 5px; margin-bottom: 15px;">
-                    <h4 style="margin-bottom: 10px;">Código de Autenticação</h4>
-                    <p id="user-code-display" style="font-size: 24px; font-weight: bold; margin-bottom: 10px;"></p>
-                    <p style="margin-bottom: 10px;">Acesse o link abaixo e insira o código acima para autorizar o aplicativo:</p>
-                    <a id="verification-url" href="#" target="_blank" style="color: var(--primary);"></a>
-                    <p id="expires-in" style="margin-top: 10px; font-size: 12px;"></p>
-                </div>
-            </div>`;
-
-        // Adiciona os botões após o último botão existente
-        const lastButton = settingsForm.querySelector('button:last-child');
-        if (lastButton) {
-            lastButton.insertAdjacentHTML('afterend', authButtonsHtml);
-        }
-
-        // Adiciona os event listeners
+        // Adiciona os event listeners para os botões de autenticação
         document.getElementById('generate-user-code')?.addEventListener('click', () => this.generateUserCode());
         document.getElementById('check-auth-status')?.addEventListener('click', () => this.checkAuthStatus());
     },
