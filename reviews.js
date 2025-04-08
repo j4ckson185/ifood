@@ -3,7 +3,9 @@
  * Implementa os critérios de homologação do módulo Review
  */
 
-const REVIEWS = {
+// Extendendo o objeto global REVIEWS, não redeclarando
+// NÃO use "const REVIEWS = { ... }"
+REVIEWS = {
     /**
      * Lista de avaliações
      */
@@ -17,7 +19,7 @@ const REVIEWS = {
     /**
      * Inicializa o módulo de avaliações
      */
-    init() {
+    init: function() {
         // Carrega avaliações do localStorage (se existirem)
         this.loadSavedReviews();
         
