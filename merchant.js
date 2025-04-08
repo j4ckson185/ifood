@@ -3,37 +3,20 @@
  * Implementa os critérios de homologação do módulo Merchant
  */
 
-// Extendendo o objeto global MERCHANT, não redeclarando
-// NÃO use "const MERCHANT = { ... }"
-MERCHANT = {
-    /**
-     * Dados da loja atual
-     */
+// Atribuir ao objeto global
+window.MERCHANT = {
+    // Propriedades...
     currentMerchant: null,
-    
-    /**
-     * Status da loja atual
-     */
     currentStatus: null,
-    
-    /**
-     * Horários de funcionamento da loja
-     */
     openingHours: null,
-    
-    /**
-     * Interrupções da loja
-     */
     interruptions: [],
     
-    /**
-     * Inicializa o módulo Merchant
-     */
+    // Métodos
     init: function() {
-        // Inicializa os listeners de eventos para os botões
+        console.log("Inicializando módulo MERCHANT");
         this.initEventListeners();
         
-        // Carrega dados do merchant do localStorage (se existirem)
+        // Carrega dados do merchant do localStorage
         var savedData = localStorage.getItem('merchant_data');
         if (savedData) {
             try {
@@ -43,7 +26,6 @@ MERCHANT = {
                 this.openingHours = data.openingHours || null;
                 this.interruptions = data.interruptions || [];
                 
-                // Atualiza a UI com os dados salvos
                 this.updateMerchantUI();
             } catch (err) {
                 console.error('Erro ao carregar dados do merchant:', err);
