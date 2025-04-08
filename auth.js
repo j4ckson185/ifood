@@ -180,136 +180,139 @@ AUTH = {
      * Realiza a autenticação para obter novos tokens
      * @returns {Promise<Object>} - Dados do token
      */
-    authenticate: function() {
-        var self = this;
-        return new Promise(function(resolve, reject) {
-            try {
-                if (!self.credentials.client_id || !self.credentials.client_secret) {
-                    throw new Error('Credenciais não configuradas. Configure o Client ID e Client Secret nas configurações.');
+authenticate: function() {
+    var self = this;
+    return new Promise(function(resolve, reject) {
+        try {
+            if (!self.credentials.client_id || !self.credentials.client_secret) {
+                throw new Error('Credenciais não configuradas. Configure o Client ID e Client Secret nas configurações.');
+            }
+            
+            console.log("Tentando autenticar com:", {
+                client_id: self.credentials.client_id,
+                client_secret: "******" // segurança
+            });
+            
+            var formData = new URLSearchParams();
+            formData.append('grant_type', 'client_credentials');
+            formData.append('client_id', self.credentials.client_id);
+            formData.append('client_secret', self.credentials.client_secret);
+            
+            // Note que a URL é diferente agora na função proxy
+            fetch(self.baseUrl + '/oauth/token', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded'
+                },
+                body: formData.toString()
+            })
+            .then(function(response) {
+                console.log("Resposta de autenticação:", response.status);
+                
+                if (!response.ok) {
+                    return response.text().then(function(text) {
+                        console.error("Texto de erro:", text);
+                        
+                        var errorData;
+                        try {
+                            errorData = JSON.parse(text);
+                            console.error("Dados de erro:", errorData);
+                        } catch (e) {
+                            errorData = { error_description: text || response.statusText };
+                        }
+                        
+                        throw new Error('Erro de autenticação: ' + (errorData.error_description || response.statusText));
+                    });
+                }
+                return response.text();
+            })
+            .then(function(text) {
+                console.log("Texto da resposta:", text ? "Recebido" : "Vazio");
+                
+                if (!text) {
+                    throw new Error('Resposta de autenticação vazia');
                 }
                 
-                console.log("Tentando autenticar com:", {
-                    client_id: self.credentials.client_id,
-                    client_secret: self.credentials.client_secret.substring(0, 10) + "..." // Mostrar apenas parte do secret por segurança
-                });
+                var tokenData;
+                try {
+                    tokenData = JSON.parse(text);
+                    console.log("Token recebido:", tokenData.access_token ? "Válido" : "Inválido");
+                } catch (e) {
+                    console.error("Erro ao parsejar token:", e);
+                    throw new Error('Resposta inválida: ' + e.message);
+                }
                 
-                var formData = new URLSearchParams();
-                formData.append('grant_type', 'client_credentials');
-                formData.append('client_id', self.credentials.client_id);
-                formData.append('client_secret', self.credentials.client_secret);
+                self.saveToken(tokenData);
                 
-                fetch(self.baseUrl + '/oauth/token', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/x-www-form-urlencoded'
-                    },
-                    body: formData
-                })
-                .then(function(response) {
-                    console.log("Resposta de autenticação:", response.status);
-                    
-                    if (!response.ok) {
-                        return response.text().then(function(text) {
-                            console.error("Texto de erro:", text);
-                            
-                            var errorData;
-                            try {
-                                errorData = JSON.parse(text);
-                                console.error("Dados de erro:", errorData);
-                            } catch (e) {
-                                errorData = { error_description: text || response.statusText };
-                            }
-                            
-                            throw new Error('Erro de autenticação: ' + (errorData.error_description || response.statusText));
-                        });
-                    }
-                    return response.text();
-                })
-                .then(function(text) {
-                    console.log("Texto da resposta:", text ? "Recebido" : "Vazio");
-                    
-                    if (!text) {
-                        throw new Error('Resposta de autenticação vazia');
-                    }
-                    
-                    var tokenData;
-                    try {
-                        tokenData = JSON.parse(text);
-                        console.log("Token recebido:", tokenData.access_token ? "Válido" : "Inválido");
-                    } catch (e) {
-                        console.error("Erro ao parsejar token:", e);
-                        throw new Error('Resposta inválida: ' + e.message);
-                    }
-                    
-                    self.saveToken(tokenData);
-                    
-                    showToast('success', 'Autenticação realizada com sucesso!');
-                    resolve(tokenData);
-                })
-                .catch(function(error) {
-                    console.error('Erro na autenticação:', error);
-                    showToast('error', error.message || 'Erro na autenticação');
-                    reject(error);
-                });
-            } catch (error) {
+                showToast('success', 'Autenticação realizada com sucesso!');
+                resolve(tokenData);
+            })
+            .catch(function(error) {
                 console.error('Erro na autenticação:', error);
                 showToast('error', error.message || 'Erro na autenticação');
                 reject(error);
-            }
-        });
-    },
+            });
+        } catch (error) {
+            console.error('Erro na autenticação:', error);
+            showToast('error', error.message || 'Erro na autenticação');
+            reject(error);
+        }
+    });
+}
     
     /**
      * Renova o token usando o refresh_token
      * @returns {Promise<Object>} - Dados do novo token
      */
-    refreshToken: function() {
-        var self = this;
-        return new Promise(function(resolve, reject) {
-            try {
-                // Se não tiver refresh token, faz autenticação completa
-                if (!self.token.refresh_token) {
-                    return self.authenticate()
-                        .then(resolve)
-                        .catch(reject);
-                }
-                
-                var formData = new URLSearchParams();
-                formData.append('grant_type', 'refresh_token');
-                formData.append('refresh_token', self.token.refresh_token);
-                
-                fetch(self.baseUrl + '/oauth/token', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/x-www-form-urlencoded'
-                    },
-                    body: formData
-                })
-                .then(function(response) {
-                    if (!response.ok) {
-                        // Se der erro no refresh, tenta autenticação completa
-                        console.warn('Refresh token inválido. Tentando autenticação completa...');
-                        return self.authenticate();
-                    }
-                    return response.json();
-                })
-                .then(function(tokenData) {
-                    self.saveToken(tokenData);
-                    resolve(tokenData);
-                })
-                .catch(function(error) {
-                    console.error('Erro ao renovar token:', error);
-                    // Fallback para autenticação completa
-                    self.authenticate()
-                        .then(resolve)
-                        .catch(reject);
-                });
-            } catch (error) {
-                console.error('Erro ao renovar token:', error);
-                reject(error);
+refreshToken: function() {
+    var self = this;
+    return new Promise(function(resolve, reject) {
+        try {
+            // Se não tiver refresh token, faz autenticação completa
+            if (!self.token.refresh_token) {
+                return self.authenticate()
+                    .then(resolve)
+                    .catch(reject);
             }
-        });
-    },
+            
+            var formData = new URLSearchParams();
+            formData.append('grant_type', 'refresh_token');
+            formData.append('refresh_token', self.token.refresh_token);
+            formData.append('client_id', self.credentials.client_id);
+            formData.append('client_secret', self.credentials.client_secret);
+            
+            fetch(self.baseUrl + '/oauth/token', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded'
+                },
+                body: formData.toString()
+            })
+            .then(function(response) {
+                if (!response.ok) {
+                    // Se der erro no refresh, tenta autenticação completa
+                    console.warn('Refresh token inválido. Tentando autenticação completa...');
+                    return self.authenticate();
+                }
+                return response.json();
+            })
+            .then(function(tokenData) {
+                self.saveToken(tokenData);
+                resolve(tokenData);
+            })
+            .catch(function(error) {
+                console.error('Erro ao renovar token:', error);
+                // Fallback para autenticação completa
+                self.authenticate()
+                    .then(resolve)
+                    .catch(reject);
+            });
+        } catch (error) {
+            console.error('Erro ao renovar token:', error);
+            reject(error);
+        }
+    });
+}
     
     /**
      * Cria cabeçalhos de autenticação para as requisições
