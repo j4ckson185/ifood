@@ -5,7 +5,7 @@
 
 // Extendendo o objeto global ORDERS, não redeclarando
 // NÃO use "const ORDERS = { ... }"
-ORDERS = {
+window.ORDERS = {
     /**
      * Lista de pedidos
      */
@@ -270,7 +270,7 @@ ORDERS = {
             // Faz a requisição de polling com o header x-polling-merchants
             let events;
             try {
-                events = await AUTH.apiRequest('/polling', {
+                events = await window.AUTH.apiRequest('/polling', {
                     headers: {
                         'x-polling-merchants': merchantId
                     }
@@ -353,7 +353,7 @@ ORDERS = {
             for (let i = 0; i < eventIds.length; i += batchSize) {
                 const batch = eventIds.slice(i, i + batchSize);
                 
-                await AUTH.apiRequest('/acknowledgment', {
+                await window.AUTH.apiRequest('/acknowledgment', {
                     method: 'POST',
                     body: JSON.stringify({
                         eventIds: batch
