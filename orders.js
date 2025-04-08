@@ -249,39 +249,52 @@ const ORDERS = {
         }
     },
     
-    /**
-     * Faz uma chamada de polling para verificar novos eventos (Critério: Receber eventos via polling)
-     */
-    async pollForEvents() {
+/**
+ * Faz uma chamada de polling para verificar novos eventos
+ */
+async pollForEvents() {
+    try {
+        if (!this.pollingEnabled) return;
+        
+        console.log('Verificando novos eventos...');
+        this.lastPollTime = new Date();
+        
+        // Define o merchant ID para o header de filtragem
+        const merchantId = AUTH.credentials.merchantId;
+        if (!merchantId) {
+            throw new Error('ID do merchant não configurado');
+        }
+        
+        // Faz a requisição de polling com o header x-polling-merchants
+        let events;
         try {
-            if (!this.pollingEnabled) return;
-            
-            console.log('Verificando novos eventos...');
-            this.lastPollTime = new Date();
-            
-            // Define o merchant ID para o header de filtragem
-            const merchantId = AUTH.credentials.merchantId;
-            if (!merchantId) {
-                throw new Error('ID do merchant não configurado');
-            }
-            
-            // Faz a requisição de polling com o header x-polling-merchants
-            const events = await AUTH.apiRequest('/polling', {
+            events = await AUTH.apiRequest('/polling', {
                 headers: {
                     'x-polling-merchants': merchantId
                 }
             });
-            
-            console.log('Eventos recebidos:', events);
-            
-            // Processa os eventos recebidos
-            if (events && events.length > 0) {
-                await this.processEvents(events);
-            }
         } catch (error) {
-            console.error('Erro no polling de eventos:', error);
+            console.warn('Erro no polling, tentando continuar:', error);
+            return; // Continua a execução mesmo com erro
         }
-    },
+        
+        // Se a resposta for nula ou indefinida, considera como vazia
+        if (!events) {
+            console.log('Nenhum evento encontrado no polling.');
+            return;
+        }
+        
+        console.log('Eventos recebidos:', events);
+        
+        // Processa os eventos recebidos
+        if (events && Array.isArray(events) && events.length > 0) {
+            await this.processEvents(events);
+        }
+    } catch (error) {
+        console.error('Erro no polling de eventos:', error);
+        // Não propaga o erro para permitir que o polling continue
+    }
+}
     
     /**
      * Processa os eventos recebidos do polling
