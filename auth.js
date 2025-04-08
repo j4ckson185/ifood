@@ -182,86 +182,107 @@ init: function() {
         });
     },
     
-    // Realiza a autenticação
-    authenticate: function() {
-        var self = this;
-        return new Promise(function(resolve, reject) {
-            try {
-                if (!self.credentials.client_id || !self.credentials.client_secret) {
-                    throw new Error('Credenciais não configuradas. Configure o Client ID e Client Secret nas configurações.');
+// Dentro do módulo AUTH, modifique o método authenticate
+authenticate: function() {
+    var self = this;
+    return new Promise(function(resolve, reject) {
+        try {
+            // Verifica e inicializa credenciais padrão se não estiverem definidas
+            if (!self.credentials) {
+                self.credentials = {
+                    client_id: '6015fafa-fd3e-4053-9080-bfdbf6e78526',
+                    client_secret: 'p1jv9gtn6loszhrl6tmcpwaeuk21w4ukrudeinuzfwihb9fqdutubsbbggav8rkbsiqgik45kdgdp471ua2ivmh25dz7mywcfc4',
+                    merchantId: '2733980',
+                    merchantUuid: '3a9fc83b-ffc3-43e9-aeb6-36c9e827a143'
+                };
+            }
+
+            // Verifica se as credenciais necessárias estão presentes
+            if (!self.credentials.client_id || !self.credentials.client_secret) {
+                throw new Error('Credenciais não configuradas. Configure o Client ID e Client Secret nas configurações.');
+            }
+            
+            console.log("Tentando autenticar com:", {
+                client_id: self.credentials.client_id,
+                client_secret: "******" // segurança
+            });
+            
+            var formData = new URLSearchParams();
+            formData.append('grant_type', 'client_credentials');
+            formData.append('client_id', self.credentials.client_id);
+            formData.append('client_secret', self.credentials.client_secret);
+            
+            fetch(self.baseUrl + '/oauth/token', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded'
+                },
+                body: formData.toString()
+            })
+            .then(function(response) {
+                console.log("Resposta de autenticação:", response.status);
+                
+                if (!response.ok) {
+                    return response.text().then(function(text) {
+                        console.error("Texto de erro:", text);
+                        
+                        var errorData;
+                        try {
+                            errorData = JSON.parse(text);
+                            console.error("Dados de erro:", errorData);
+                        } catch (e) {
+                            errorData = { error_description: text || response.statusText };
+                        }
+                        
+                        throw new Error('Erro de autenticação: ' + (errorData.error_description || response.statusText));
+                    });
+                }
+                return response.text();
+            })
+            .then(function(text) {
+                console.log("Texto da resposta:", text ? "Recebido" : "Vazio");
+                
+                if (!text) {
+                    throw new Error('Resposta de autenticação vazia');
                 }
                 
-                console.log("Tentando autenticar com:", {
-                    client_id: self.credentials.client_id,
-                    client_secret: "******" // segurança
-                });
+                var tokenData;
+                try {
+                    tokenData = JSON.parse(text);
+                    console.log("Token recebido:", tokenData.access_token ? "Válido" : "Inválido");
+                } catch (e) {
+                    console.error("Erro ao parsear token:", e);
+                    throw new Error('Resposta inválida: ' + e.message);
+                }
                 
-// Dentro da função authenticate, modifique a criação do formData
-var formData = new URLSearchParams();
-formData.append('grant_type', 'client_credentials'); // Sempre definir
-formData.append('client_id', this.credentials.client_id);
-formData.append('client_secret', this.credentials.client_secret);
+                // Adiciona validações extras ao token
+                if (!tokenData.access_token) {
+                    throw new Error('Token de acesso não recebido');
+                }
                 
-                fetch(self.baseUrl + '/oauth/token', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/x-www-form-urlencoded'
-                    },
-                    body: formData.toString()
-                })
-                .then(function(response) {
-                    console.log("Resposta de autenticação:", response.status);
-                    
-                    if (!response.ok) {
-                        return response.text().then(function(text) {
-                            console.error("Texto de erro:", text);
-                            
-                            var errorData;
-                            try {
-                                errorData = JSON.parse(text);
-                                console.error("Dados de erro:", errorData);
-                            } catch (e) {
-                                errorData = { error_description: text || response.statusText };
-                            }
-                            
-                            throw new Error('Erro de autenticação: ' + (errorData.error_description || response.statusText));
-                        });
-                    }
-                    return response.text();
-                })
-                .then(function(text) {
-                    console.log("Texto da resposta:", text ? "Recebido" : "Vazio");
-                    
-                    if (!text) {
-                        throw new Error('Resposta de autenticação vazia');
-                    }
-                    
-                    var tokenData;
-                    try {
-                        tokenData = JSON.parse(text);
-                        console.log("Token recebido:", tokenData.access_token ? "Válido" : "Inválido");
-                    } catch (e) {
-                        console.error("Erro ao parsejar token:", e);
-                        throw new Error('Resposta inválida: ' + e.message);
-                    }
-                    
-                    self.saveToken(tokenData);
-                    
-                    showToast('success', 'Autenticação realizada com sucesso!');
-                    resolve(tokenData);
-                })
-                .catch(function(error) {
-                    console.error('Erro na autenticação:', error);
-                    showToast('error', error.message || 'Erro na autenticação');
-                    reject(error);
-                });
-            } catch (error) {
+                self.saveToken(tokenData);
+                
+                showToast('success', 'Autenticação realizada com sucesso!');
+                resolve(tokenData);
+            })
+            .catch(function(error) {
                 console.error('Erro na autenticação:', error);
                 showToast('error', error.message || 'Erro na autenticação');
+                
+                // Adiciona mais contexto ao erro
+                if (error.message.includes('Invalid grant type')) {
+                    showToast('error', 'Verifique as credenciais de autenticação');
+                }
+                
                 reject(error);
-            }
-        });
-    },
+            });
+        } catch (error) {
+            console.error('Erro na autenticação:', error);
+            showToast('error', error.message || 'Erro na autenticação');
+            reject(error);
+        }
+    });
+},
     
     // Obtém headers de autenticação
     getAuthHeaders: function() {
