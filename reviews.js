@@ -1,11 +1,6 @@
-/**
- * Módulo para gerenciamento das funcionalidades relacionadas às avaliações
- * Implementa os critérios de homologação do módulo Review
- */
-
-// Extendendo o objeto global REVIEWS, não redeclarando
-// NÃO use "const REVIEWS = { ... }"
-REVIEWS = {
+// reviews.js - corrigido
+// Atribuir ao objeto global
+window.REVIEWS = {
     /**
      * Lista de avaliações
      */
@@ -20,6 +15,7 @@ REVIEWS = {
      * Inicializa o módulo de avaliações
      */
     init: function() {
+        console.log("Inicializando módulo REVIEWS");
         // Carrega avaliações do localStorage (se existirem)
         this.loadSavedReviews();
         
@@ -30,8 +26,8 @@ REVIEWS = {
     /**
      * Carrega avaliações salvas no localStorage
      */
-    loadSavedReviews() {
-        const savedReviews = localStorage.getItem('reviews_data');
+    loadSavedReviews: function() {
+        var savedReviews = localStorage.getItem('reviews_data');
         if (savedReviews) {
             try {
                 this.reviews = JSON.parse(savedReviews);
@@ -50,126 +46,141 @@ REVIEWS = {
     /**
      * Salva as avaliações no localStorage
      */
-    saveReviewsData() {
+    saveReviewsData: function() {
         localStorage.setItem('reviews_data', JSON.stringify(this.reviews));
     },
     
     /**
      * Inicializa eventos de UI relacionados a avaliações
      */
-    initUIEvents() {
+    initUIEvents: function() {
+        var self = this;
+        
         // Botão de atualizar avaliações
-        const refreshReviewsBtn = document.getElementById('refresh-reviews');
+        var refreshReviewsBtn = document.getElementById('refresh-reviews');
         if (refreshReviewsBtn) {
-            refreshReviewsBtn.addEventListener('click', () => this.fetchReviews());
+            refreshReviewsBtn.addEventListener('click', function() {
+                self.fetchReviews();
+            });
         }
         
         // Botão de enviar resposta à avaliação
-        const sendReplyBtn = document.getElementById('send-review-reply');
+        var sendReplyBtn = document.getElementById('send-review-reply');
         if (sendReplyBtn) {
-            sendReplyBtn.addEventListener('click', () => this.submitReviewAnswer());
+            sendReplyBtn.addEventListener('click', function() {
+                self.submitReviewAnswer();
+            });
         }
     },
     
     /**
      * Busca as avaliações do merchant (Critério: Listar avaliações)
      */
-    async fetchReviews() {
-        try {
-            showLoading(true);
-            
-            const merchantId = AUTH.credentials.merchantId;
-            if (!merchantId) {
-                throw new Error('ID do merchant não configurado');
+    fetchReviews: function() {
+        var self = this;
+        return new Promise(function(resolve, reject) {
+            try {
+                showLoading(true);
+                
+                var merchantId = window.AUTH.credentials.merchantId;
+                if (!merchantId) {
+                    throw new Error('ID do merchant não configurado');
+                }
+                
+                // Faz a requisição para obter as avaliações
+                window.AUTH.apiRequest('/merchants/' + merchantId + '/reviews')
+                    .then(function(reviews) {
+                        console.log('Reviews:', reviews);
+                        
+                        // Se não receber avaliações ou ocorrer erro, usa simuladas
+                        if (!reviews || !Array.isArray(reviews)) {
+                            self.simulateReviews();
+                        } else {
+                            self.reviews = reviews;
+                            self.saveReviewsData();
+                        }
+                        
+                        self.updateReviewsUI();
+                        
+                        showToast('success', 'Avaliações atualizadas com sucesso!');
+                        resolve(reviews);
+                    })
+                    .catch(function(error) {
+                        console.error('Erro ao buscar avaliações:', error);
+                        showToast('error', 'Erro ao buscar avaliações');
+                        
+                        // Em caso de erro, usa avaliações simuladas
+                        self.simulateReviews();
+                        self.updateReviewsUI();
+                        resolve(self.reviews);
+                    })
+                    .finally(function() {
+                        showLoading(false);
+                    });
+            } catch (error) {
+                console.error('Erro ao buscar avaliações:', error);
+                showToast('error', error.message || 'Erro ao buscar avaliações');
+                
+                // Em caso de erro, usa avaliações simuladas
+                self.simulateReviews();
+                self.updateReviewsUI();
+                showLoading(false);
+                resolve(self.reviews);
             }
-            
-            // Faz a requisição para obter as avaliações
-            const reviews = await AUTH.apiRequest(`/merchants/${merchantId}/reviews`);
-            console.log('Reviews:', reviews);
-            
-            // Se não receber avaliações ou ocorrer erro, usa simuladas
-            if (!reviews || !Array.isArray(reviews)) {
-                this.simulateReviews();
-            } else {
-                this.reviews = reviews;
-                this.saveReviewsData();
-            }
-            
-            this.updateReviewsUI();
-            
-            showToast('success', 'Avaliações atualizadas com sucesso!');
-        } catch (error) {
-            console.error('Erro ao buscar avaliações:', error);
-            showToast('error', 'Erro ao buscar avaliações');
-            
-            // Em caso de erro, usa avaliações simuladas
-            this.simulateReviews();
-            this.updateReviewsUI();
-        } finally {
-            showLoading(false);
-        }
+        });
     },
     
     /**
      * Busca detalhes de uma avaliação específica (Critério: Obter detalhes das avaliações)
      * @param {string} reviewId ID da avaliação
      */
-    async fetchReviewDetails(reviewId) {
-        try {
-            const merchantId = AUTH.credentials.merchantId;
-            if (!merchantId || !reviewId) {
-                throw new Error('ID do merchant ou da avaliação não configurado');
+    fetchReviewDetails: function(reviewId) {
+        var self = this;
+        return new Promise(function(resolve, reject) {
+            try {
+                var merchantId = window.AUTH.credentials.merchantId;
+                if (!merchantId || !reviewId) {
+                    throw new Error('ID do merchant ou da avaliação não configurado');
+                }
+                
+                // Faz a requisição para obter os detalhes da avaliação
+                window.AUTH.apiRequest('/merchants/' + merchantId + '/reviews/' + reviewId)
+                    .then(function(reviewDetails) {
+                        console.log('Review Details:', reviewDetails);
+                        resolve(reviewDetails);
+                    })
+                    .catch(function(error) {
+                        console.error('Erro ao buscar detalhes da avaliação ' + reviewId + ':', error);
+                        reject(error);
+                    });
+            } catch (error) {
+                console.error('Erro ao buscar detalhes da avaliação ' + reviewId + ':', error);
+                reject(error);
             }
-            
-            // Faz a requisição para obter os detalhes da avaliação
-            const reviewDetails = await AUTH.apiRequest(`/merchants/${merchantId}/reviews/${reviewId}`);
-            console.log('Review Details:', reviewDetails);
-            
-            return reviewDetails;
-        } catch (error) {
-            console.error(`Erro ao buscar detalhes da avaliação ${reviewId}:`, error);
-            throw error;
-        }
+        });
     },
     
     /**
      * Exibe o modal para responder a uma avaliação
      * @param {string} reviewId ID da avaliação
      */
-    async showReviewReplyModal(reviewId) {
+    showReviewReplyModal: function(reviewId) {
+        var self = this;
         try {
             // Busca os detalhes da avaliação
-            let review = this.reviews.find(r => r.id === reviewId);
+            var review = this.reviews.find(function(r) { return r.id === reviewId; });
             
             // Se não encontrou nos detalhes em cache, tenta buscar da API
             if (!review) {
-                try {
-                    review = await this.fetchReviewDetails(reviewId);
-                } catch (error) {
-                    throw new Error('Não foi possível carregar os detalhes da avaliação');
-                }
-            }
-            
-            // Salva a avaliação atual
-            this.currentReview = review;
-            
-            // Preenche os dados do modal
-            document.getElementById('modal-review-rating').innerHTML = '★'.repeat(review.rating);
-            
-            // Formata a data
-            const date = new Date(review.date);
-            document.getElementById('modal-review-date').textContent = date.toLocaleDateString();
-            
-            // Texto da avaliação
-            document.getElementById('modal-review-text').textContent = review.comment || 'Sem comentário';
-            
-            // Limpa o campo de resposta
-            document.getElementById('review-reply').value = review.answer || '';
-            
-            // Abre o modal
-            const modal = document.getElementById('review-reply-modal');
-            if (modal) {
-                modal.classList.add('active');
+                this.fetchReviewDetails(reviewId)
+                    .then(function(review) {
+                        self.displayReviewInModal(review);
+                    })
+                    .catch(function(error) {
+                        showToast('error', 'Não foi possível carregar os detalhes da avaliação');
+                    });
+            } else {
+                this.displayReviewInModal(review);
             }
         } catch (error) {
             console.error('Erro ao exibir modal de resposta:', error);
@@ -178,23 +189,52 @@ REVIEWS = {
     },
     
     /**
+     * Exibe os detalhes da avaliação no modal
+     * @param {Object} review Avaliação a ser exibida
+     */
+    displayReviewInModal: function(review) {
+        // Salva a avaliação atual
+        this.currentReview = review;
+        
+        // Preenche os dados do modal
+        document.getElementById('modal-review-rating').innerHTML = '★'.repeat(review.rating);
+        
+        // Formata a data
+        var date = new Date(review.date);
+        document.getElementById('modal-review-date').textContent = date.toLocaleDateString();
+        
+        // Texto da avaliação
+        document.getElementById('modal-review-text').textContent = review.comment || 'Sem comentário';
+        
+        // Limpa o campo de resposta
+        document.getElementById('review-reply').value = review.answer || '';
+        
+        // Abre o modal
+        var modal = document.getElementById('review-reply-modal');
+        if (modal) {
+            modal.classList.add('active');
+        }
+    },
+    
+    /**
      * Envia uma resposta à avaliação (Critério: Responder uma avaliação)
      */
-    async submitReviewAnswer() {
+    submitReviewAnswer: function() {
+        var self = this;
         try {
             if (!this.currentReview) {
                 throw new Error('Nenhuma avaliação selecionada');
             }
             
-            const merchantId = AUTH.credentials.merchantId;
-            const reviewId = this.currentReview.id;
+            var merchantId = window.AUTH.credentials.merchantId;
+            var reviewId = this.currentReview.id;
             
             if (!merchantId || !reviewId) {
                 throw new Error('ID do merchant ou da avaliação não configurado');
             }
             
             // Obtém o texto da resposta
-            const answerText = document.getElementById('review-reply').value.trim();
+            var answerText = document.getElementById('review-reply').value.trim();
             
             if (!answerText) {
                 throw new Error('Digite uma resposta para a avaliação');
@@ -203,36 +243,43 @@ REVIEWS = {
             showLoading(true);
             
             // Envia a resposta para a API
-            const response = await AUTH.apiRequest(`/merchants/${merchantId}/reviews/${reviewId}/answers`, {
+            window.AUTH.apiRequest('/merchants/' + merchantId + '/reviews/' + reviewId + '/answers', {
                 method: 'POST',
                 body: JSON.stringify({
                     text: answerText
                 })
+            })
+            .then(function(response) {
+                console.log('Review answer response:', response);
+                
+                // Atualiza a resposta na lista de avaliações local
+                var reviewIndex = self.reviews.findIndex(function(r) { return r.id === reviewId; });
+                if (reviewIndex !== -1) {
+                    self.reviews[reviewIndex].answer = answerText;
+                    self.saveReviewsData();
+                }
+                
+                // Fecha o modal
+                var modal = document.getElementById('review-reply-modal');
+                if (modal) {
+                    modal.classList.remove('active');
+                }
+                
+                // Atualiza a UI
+                self.updateReviewsUI();
+                
+                showToast('success', 'Resposta enviada com sucesso!');
+            })
+            .catch(function(error) {
+                console.error('Erro ao enviar resposta:', error);
+                showToast('error', error.message || 'Erro ao enviar resposta');
+            })
+            .finally(function() {
+                showLoading(false);
             });
-            
-            console.log('Review answer response:', response);
-            
-            // Atualiza a resposta na lista de avaliações local
-            const reviewIndex = this.reviews.findIndex(r => r.id === reviewId);
-            if (reviewIndex !== -1) {
-                this.reviews[reviewIndex].answer = answerText;
-                this.saveReviewsData();
-            }
-            
-            // Fecha o modal
-            const modal = document.getElementById('review-reply-modal');
-            if (modal) {
-                modal.classList.remove('active');
-            }
-            
-            // Atualiza a UI
-            this.updateReviewsUI();
-            
-            showToast('success', 'Resposta enviada com sucesso!');
         } catch (error) {
             console.error('Erro ao enviar resposta:', error);
             showToast('error', error.message || 'Erro ao enviar resposta');
-        } finally {
             showLoading(false);
         }
     },
@@ -240,7 +287,7 @@ REVIEWS = {
     /**
      * Simula algumas avaliações para demonstração
      */
-    simulateReviews() {
+    simulateReviews: function() {
         // Cria algumas avaliações simuladas
         this.reviews = [
             {
@@ -307,8 +354,9 @@ REVIEWS = {
     /**
      * Atualiza a UI com as avaliações
      */
-    updateReviewsUI() {
-        const reviewsList = document.getElementById('reviews-list');
+    updateReviewsUI: function() {
+        var self = this;
+        var reviewsList = document.getElementById('reviews-list');
         if (!reviewsList) return;
         
         // Limpa a lista
@@ -321,21 +369,21 @@ REVIEWS = {
         }
         
         // Ordena as avaliações por data (mais recentes primeiro)
-        const sortedReviews = [...this.reviews].sort((a, b) => {
+        var sortedReviews = this.reviews.slice().sort(function(a, b) {
             return new Date(b.date) - new Date(a.date);
         });
         
         // Cria um card para cada avaliação
-        sortedReviews.forEach(review => {
-            const reviewCard = document.createElement('div');
+        sortedReviews.forEach(function(review) {
+            var reviewCard = document.createElement('div');
             reviewCard.className = 'review-card';
             
             // Formata estrelas com base na avaliação
-            const stars = '★'.repeat(review.rating) + '☆'.repeat(5 - review.rating);
+            var stars = '★'.repeat(review.rating) + '☆'.repeat(5 - review.rating);
             
             // Formata a data
-            const date = new Date(review.date);
-            const formattedDate = date.toLocaleDateString();
+            var date = new Date(review.date);
+            var formattedDate = date.toLocaleDateString();
             
             reviewCard.innerHTML = `
                 <div class="review-header">
@@ -359,10 +407,10 @@ REVIEWS = {
             reviewsList.appendChild(reviewCard);
             
             // Adiciona event listener ao botão de responder
-            const replyBtn = reviewCard.querySelector('.review-reply-btn');
+            var replyBtn = reviewCard.querySelector('.review-reply-btn');
             if (replyBtn) {
-                replyBtn.addEventListener('click', () => {
-                    this.showReviewReplyModal(review.id);
+                replyBtn.addEventListener('click', function() {
+                    self.showReviewReplyModal(review.id);
                 });
             }
         });
