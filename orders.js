@@ -254,58 +254,72 @@ window.ORDERS = {
     /**
      * Faz uma chamada de polling para verificar novos eventos (Critério: Receber eventos via polling)
      */
+// Dentro do módulo ORDERS, modifique o método pollForEvents
 pollForEvents: async function() {
-        try {
-            if (!this.pollingEnabled) return;
-            
-            // Verifica se AUTH está configurado
-            if (!window.AUTH || !window.AUTH.credentials) {
-                console.error('Módulo AUTH não configurado corretamente');
-                return;
-            }
-            
-            console.log('Verificando novos eventos...');
-            this.lastPollTime = new Date();
-            
-            // Define o merchant ID para o header de filtragem
-            const merchantId = window.AUTH.credentials.merchantId;
-            if (!merchantId) {
-                console.error('ID do merchant não configurado');
-                showToast('error', 'Configure o ID do merchant nas configurações');
-                return;
-            }
-            
-            // Faz a requisição de polling com o header x-polling-merchants
-            let events;
-            try {
-                events = await window.AUTH.apiRequest('/polling', {
-                    headers: {
-                        'x-polling-merchants': merchantId
-                    }
-                });
-            } catch (error) {
-                console.warn('Erro no polling, tentando continuar:', error);
-                showToast('warning', 'Erro ao verificar novos eventos');
-                return; // Continua a execução mesmo com erro
-            }
-            
-            // Se a resposta for nula ou indefinida, considera como vazia
-            if (!events) {
-                console.log('Nenhum evento encontrado no polling.');
-                return;
-            }
-            
-            console.log('Eventos recebidos:', events);
-            
-            // Processa os eventos recebidos
-            if (events && Array.isArray(events) && events.length > 0) {
-                await this.processEvents(events);
-            }
-        } catch (error) {
-            console.error('Erro no polling de eventos:', error);
-            showToast('error', 'Erro ao verificar eventos');
+    try {
+        if (!this.pollingEnabled) return;
+        
+        // Verifica se os módulos necessários estão carregados
+        if (!window.AUTH || !window.AUTH.credentials) {
+            console.error('Módulo AUTH não inicializado corretamente');
+            showToast('error', 'Erro na configuração do módulo de autenticação');
+            return;
         }
-    },
+        
+        console.log('Verificando novos eventos...');
+        this.lastPollTime = new Date();
+        
+        // Define o merchant ID para o header de filtragem
+        const merchantId = window.AUTH.credentials.merchantId;
+        if (!merchantId) {
+            console.error('ID do merchant não configurado');
+            showToast('error', 'Configure o ID do merchant nas configurações');
+            return;
+        }
+        
+        // Adiciona verificação de credenciais 
+        if (!window.AUTH.credentials.client_id || !window.AUTH.credentials.client_secret) {
+            console.error('Credenciais incompletas');
+            showToast('error', 'Configure as credenciais de autenticação');
+            return;
+        }
+        
+        // Faz a requisição de polling com o header x-polling-merchants
+        let events;
+        try {
+            events = await window.AUTH.apiRequest('/polling', {
+                headers: {
+                    'x-polling-merchants': merchantId
+                }
+            });
+        } catch (error) {
+            console.warn('Erro no polling, tentando continuar:', error);
+            showToast('warning', 'Erro ao verificar novos eventos');
+            return;
+        }
+        
+        // Se a resposta for nula ou indefinida, considera como vazia
+        if (!events) {
+            console.log('Nenhum evento encontrado no polling.');
+            return;
+        }
+        
+        console.log('Eventos recebidos:', events);
+        
+        // Filtra e processa eventos
+        const eventosNaoProcessados = events.filter(evento => 
+            evento.id && !this.processedEvents.includes(evento.id)
+        );
+        
+        // Processa os eventos recebidos
+        if (eventosNaoProcessados.length > 0) {
+            await this.processEvents(eventosNaoProcessados);
+        }
+    } catch (error) {
+        console.error('Erro no polling de eventos:', error);
+        showToast('error', 'Erro crítico ao processar eventos');
+    }
+},
     
     /**
      * Processa os eventos recebidos do polling
