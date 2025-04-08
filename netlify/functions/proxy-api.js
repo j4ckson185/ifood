@@ -1,8 +1,6 @@
-// netlify/functions/proxy-api.js
-const fetch = require('node-fetch');
-
+// netlify/functions/proxy-api.js - atualize esta parte
 exports.handler = async function(event, context) {
-  // URL base da API do iFood
+  // URLs base da API do iFood
   const IFOOD_API_BASE = 'https://merchant-api.ifood.com.br';
   
   // Log para depuração
@@ -46,9 +44,16 @@ exports.handler = async function(event, context) {
     
     console.log("Caminho da API:", apiPath);
     
-    // URL completa para a API
-    const url = `${IFOOD_API_BASE}${apiPath}`;
-    console.log("URL para API iFood:", url);
+    // URL completa para a API - trata caminhos especiais
+    let url;
+    if (apiPath.includes('/oauth/token')) {
+      // Corrige o endpoint de autenticação
+      url = `${IFOOD_API_BASE}/authentication/v1.0/oauth/token`;
+      console.log("URL para API de autenticação iFood:", url);
+    } else {
+      url = `${IFOOD_API_BASE}${apiPath}`;
+      console.log("URL para API iFood:", url);
+    }
     
     // Prepara os headers
     const headers = {};
