@@ -3,7 +3,9 @@
  * Implementa os critérios de homologação do módulo Order
  */
 
-const ORDERS = {
+// Extendendo o objeto global ORDERS, não redeclarando
+// NÃO use "const ORDERS = { ... }"
+ORDERS = {
     /**
      * Lista de pedidos
      */
