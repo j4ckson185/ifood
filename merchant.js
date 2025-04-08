@@ -3,7 +3,9 @@
  * Implementa os critérios de homologação do módulo Merchant
  */
 
-const MERCHANT = {
+// Extendendo o objeto global MERCHANT, não redeclarando
+// NÃO use "const MERCHANT = { ... }"
+MERCHANT = {
     /**
      * Dados da loja atual
      */
@@ -27,15 +29,15 @@ const MERCHANT = {
     /**
      * Inicializa o módulo Merchant
      */
-    init() {
+    init: function() {
         // Inicializa os listeners de eventos para os botões
         this.initEventListeners();
         
         // Carrega dados do merchant do localStorage (se existirem)
-        const savedData = localStorage.getItem('merchant_data');
+        var savedData = localStorage.getItem('merchant_data');
         if (savedData) {
             try {
-                const data = JSON.parse(savedData);
+                var data = JSON.parse(savedData);
                 this.currentMerchant = data.merchant || null;
                 this.currentStatus = data.status || null;
                 this.openingHours = data.openingHours || null;
@@ -52,49 +54,63 @@ const MERCHANT = {
     /**
      * Configura os ouvintes de eventos para os botões e interações da UI
      */
-    initEventListeners() {
+    initEventListeners: function() {
+        var self = this;
+        
         // Botão de atualizar dados do merchant
-        const refreshMerchantBtn = document.getElementById('refresh-merchant');
+        var refreshMerchantBtn = document.getElementById('refresh-merchant');
         if (refreshMerchantBtn) {
-            refreshMerchantBtn.addEventListener('click', () => this.loadAllMerchantData());
+            refreshMerchantBtn.addEventListener('click', function() {
+                self.loadAllMerchantData();
+            });
         }
         
         // Botão de alternar status da loja
-        const toggleStatusBtn = document.getElementById('toggle-store-status');
+        var toggleStatusBtn = document.getElementById('toggle-store-status');
         if (toggleStatusBtn) {
-            toggleStatusBtn.addEventListener('click', () => this.toggleMerchantStatus());
+            toggleStatusBtn.addEventListener('click', function() {
+                self.toggleMerchantStatus();
+            });
         }
         
         // Botão de criar interrupção
-        const createInterruptionBtn = document.getElementById('create-interruption');
+        var createInterruptionBtn = document.getElementById('create-interruption');
         if (createInterruptionBtn) {
-            createInterruptionBtn.addEventListener('click', () => this.showInterruptionModal());
+            createInterruptionBtn.addEventListener('click', function() {
+                self.showInterruptionModal();
+            });
         }
         
         // Botão de confirmar criação de interrupção
-        const confirmInterruptionBtn = document.getElementById('confirm-interruption');
+        var confirmInterruptionBtn = document.getElementById('confirm-interruption');
         if (confirmInterruptionBtn) {
-            confirmInterruptionBtn.addEventListener('click', () => this.createInterruption());
+            confirmInterruptionBtn.addEventListener('click', function() {
+                self.createInterruption();
+            });
         }
         
         // Botão de editar horários de funcionamento
-        const editOpeningHoursBtn = document.getElementById('edit-opening-hours');
+        var editOpeningHoursBtn = document.getElementById('edit-opening-hours');
         if (editOpeningHoursBtn) {
-            editOpeningHoursBtn.addEventListener('click', () => this.showOpeningHoursModal());
+            editOpeningHoursBtn.addEventListener('click', function() {
+                self.showOpeningHoursModal();
+            });
         }
         
         // Botão de salvar horários de funcionamento
-        const saveOpeningHoursBtn = document.getElementById('save-opening-hours');
+        var saveOpeningHoursBtn = document.getElementById('save-opening-hours');
         if (saveOpeningHoursBtn) {
-            saveOpeningHoursBtn.addEventListener('click', () => this.updateOpeningHours());
+            saveOpeningHoursBtn.addEventListener('click', function() {
+                self.updateOpeningHours();
+            });
         }
     },
     
     /**
      * Salva os dados do merchant no localStorage
      */
-    saveData() {
-        const data = {
+    saveData: function() {
+        var data = {
             merchant: this.currentMerchant,
             status: this.currentStatus,
             openingHours: this.openingHours,
@@ -107,32 +123,45 @@ const MERCHANT = {
     /**
      * Carrega todos os dados do merchant (requisitos de homologação)
      */
-    async loadAllMerchantData() {
-        try {
-            showLoading(true);
-            
-            // 1. Listar Lojas (GET /merchants)
-            await this.listMerchants();
-            
-            // 2. Listar detalhes da loja (GET /merchants/{merchantId})
-            await this.getMerchantDetails();
-            
-            // 3. Listar status da loja (GET /merchants/{merchantId}/status)
-            await this.getMerchantStatus();
-            
-            // 4. Listar interrupções (GET /merchants/{merchantId}/interruptions)
-            await this.listInterruptions();
-            
-            // 5. Listar horário de funcionamento (GET /merchants/{merchantId}/opening-hours)
-            await this.getOpeningHours();
-            
-            showToast('success', 'Dados da loja atualizados com sucesso!');
-        } catch (error) {
-            console.error('Erro ao carregar dados do merchant:', error);
-            showToast('error', 'Erro ao carregar dados da loja');
-        } finally {
-            showLoading(false);
-        }
+    loadAllMerchantData: function() {
+        var self = this;
+        return new Promise(function(resolve, reject) {
+            try {
+                showLoading(true);
+                
+                // Encadeia as promessas para executar sequencialmente
+                self.listMerchants()
+                    .then(function() {
+                        return self.getMerchantDetails();
+                    })
+                    .then(function() {
+                        return self.getMerchantStatus();
+                    })
+                    .then(function() {
+                        return self.listInterruptions();
+                    })
+                    .then(function() {
+                        return self.getOpeningHours();
+                    })
+                    .then(function() {
+                        showToast('success', 'Dados da loja atualizados com sucesso!');
+                        resolve();
+                    })
+                    .catch(function(error) {
+                        console.error('Erro ao carregar dados do merchant:', error);
+                        showToast('error', 'Erro ao carregar dados da loja');
+                        reject(error);
+                    })
+                    .finally(function() {
+                        showLoading(false);
+                    });
+            } catch (error) {
+                console.error('Erro ao carregar dados do merchant:', error);
+                showToast('error', 'Erro ao carregar dados da loja');
+                showLoading(false);
+                reject(error);
+            }
+        });
     },
     
     /**
