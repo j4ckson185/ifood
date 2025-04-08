@@ -27,7 +27,7 @@ function initApp() {
     setupUIEvents();
     
     // Carrega dados iniciais após 500ms para garantir que todos os módulos foram inicializados
-    setTimeout(() => {
+    setTimeout(function() {
         loadInitialData();
     }, 500);
 }
@@ -37,28 +37,32 @@ function initApp() {
  */
 function setupUIEvents() {
     // Menu lateral - alternar entre seções
-    const menuItems = document.querySelectorAll('.menu-item');
-    menuItems.forEach(item => {
+    var menuItems = document.querySelectorAll('.menu-item');
+    menuItems.forEach(function(item) {
         item.addEventListener('click', function() {
             // Remove classe active de todos os itens
-            menuItems.forEach(i => i.classList.remove('active'));
+            menuItems.forEach(function(i) {
+                i.classList.remove('active');
+            });
             
             // Adiciona classe active ao item clicado
             this.classList.add('active');
             
             // Obtém a seção a ser mostrada
-            const sectionId = this.dataset.section;
+            var sectionId = this.dataset.section;
             
             // Atualiza o título da seção
-            const sectionTitle = this.querySelector('span').textContent;
+            var sectionTitle = this.querySelector('span').textContent;
             document.getElementById('current-section-title').textContent = sectionTitle;
             
             // Esconde todas as seções
-            const sections = document.querySelectorAll('.content-section');
-            sections.forEach(s => s.classList.remove('active'));
+            var sections = document.querySelectorAll('.content-section');
+            sections.forEach(function(s) {
+                s.classList.remove('active');
+            });
             
             // Mostra a seção selecionada
-            const selectedSection = document.getElementById(sectionId);
+            var selectedSection = document.getElementById(sectionId);
             if (selectedSection) {
                 selectedSection.classList.add('active');
             }
@@ -66,19 +70,19 @@ function setupUIEvents() {
     });
     
     // Toggle do menu lateral em dispositivos móveis
-    const sidebarToggle = document.getElementById('sidebar-toggle');
+    var sidebarToggle = document.getElementById('sidebar-toggle');
     if (sidebarToggle) {
         sidebarToggle.addEventListener('click', function() {
-            const sidebar = document.querySelector('.sidebar');
+            var sidebar = document.querySelector('.sidebar');
             sidebar.classList.toggle('mobile-active');
         });
     }
     
     // Botões para fechar modais
-    const closeButtons = document.querySelectorAll('.close-modal, .close-modal-btn');
-    closeButtons.forEach(button => {
+    var closeButtons = document.querySelectorAll('.close-modal, .close-modal-btn');
+    closeButtons.forEach(function(button) {
         button.addEventListener('click', function() {
-            const modal = this.closest('.modal');
+            var modal = this.closest('.modal');
             if (modal) {
                 modal.classList.remove('active');
             }
@@ -86,7 +90,7 @@ function setupUIEvents() {
     });
     
     // Fecha modal clicando fora
-    document.querySelectorAll('.modal').forEach(modal => {
+    document.querySelectorAll('.modal').forEach(function(modal) {
         modal.addEventListener('click', function(e) {
             if (e.target === this) {
                 this.classList.remove('active');
@@ -95,20 +99,20 @@ function setupUIEvents() {
     });
     
     // Salvar configurações de API
-    const saveSettingsBtn = document.getElementById('save-settings');
+    var saveSettingsBtn = document.getElementById('save-settings');
     if (saveSettingsBtn) {
         saveSettingsBtn.addEventListener('click', function() {
-            const clientId = document.getElementById('client-id').value;
-            const clientSecret = document.getElementById('client-secret').value;
-            const merchantId = document.getElementById('merchant-id-input').value;
-            const merchantUuid = document.getElementById('merchant-uuid-input').value;
+            var clientId = document.getElementById('client-id').value;
+            var clientSecret = document.getElementById('client-secret').value;
+            var merchantId = document.getElementById('merchant-id-input').value;
+            var merchantUuid = document.getElementById('merchant-uuid-input').value;
             
             // Salva as credenciais
             AUTH.saveCredentials({
                 client_id: clientId,
                 client_secret: clientSecret,
-                merchantId,
-                merchantUuid
+                merchantId: merchantId,
+                merchantUuid: merchantUuid
             });
             
             showToast('success', 'Configurações salvas com sucesso!');
@@ -119,18 +123,18 @@ function setupUIEvents() {
     }
     
     // Salvar preferências
-    const savePreferencesBtn = document.getElementById('save-preferences');
+    var savePreferencesBtn = document.getElementById('save-preferences');
     if (savePreferencesBtn) {
         savePreferencesBtn.addEventListener('click', function() {
             // Salva as preferências no localStorage
-            const autoRefresh = document.getElementById('auto-refresh').checked;
-            const soundAlert = document.getElementById('sound-alert').checked;
-            const darkMode = document.getElementById('dark-mode').checked;
+            var autoRefresh = document.getElementById('auto-refresh').checked;
+            var soundAlert = document.getElementById('sound-alert').checked;
+            var darkMode = document.getElementById('dark-mode').checked;
             
             localStorage.setItem('preferences', JSON.stringify({
-                autoRefresh,
-                soundAlert,
-                darkMode
+                autoRefresh: autoRefresh,
+                soundAlert: soundAlert,
+                darkMode: darkMode
             }));
             
             // Aplica modo escuro se necessário
@@ -141,10 +145,10 @@ function setupUIEvents() {
     }
     
     // Carrega preferências salvas
-    const savedPreferences = localStorage.getItem('preferences');
+    var savedPreferences = localStorage.getItem('preferences');
     if (savedPreferences) {
         try {
-            const preferences = JSON.parse(savedPreferences);
+            var preferences = JSON.parse(savedPreferences);
             
             // Aplica preferências
             if (document.getElementById('auto-refresh')) {
@@ -170,17 +174,17 @@ function setupUIEvents() {
  */
 function loadInitialData() {
     // Carrega dados do merchant
-    MERCHANT.loadAllMerchantData().catch(err => {
+    MERCHANT.loadAllMerchantData().catch(function(err) {
         console.error('Erro ao carregar dados do merchant:', err);
     });
     
     // Carrega pedidos
-    ORDERS.fetchOrders().catch(err => {
+    ORDERS.fetchOrders().catch(function(err) {
         console.error('Erro ao carregar pedidos:', err);
     });
     
     // Carrega avaliações
-    REVIEWS.fetchReviews().catch(err => {
+    REVIEWS.fetchReviews().catch(function(err) {
         console.error('Erro ao carregar avaliações:', err);
     });
 }
@@ -202,11 +206,11 @@ function showLoading(show) {
  */
 function showToast(type, message) {
     // Cria o elemento toast
-    const toast = document.createElement('div');
+    var toast = document.createElement('div');
     toast.className = `toast ${type}`;
     
     // Define o ícone com base no tipo
-    let icon = '';
+    var icon = '';
     switch (type) {
         case 'success':
             icon = '<i class="fas fa-check-circle"></i>';
@@ -230,19 +234,19 @@ function showToast(type, message) {
     `;
     
     // Adiciona ao container
-    const container = document.getElementById('toast-container');
+    var container = document.getElementById('toast-container');
     container.appendChild(toast);
     
     // Adiciona evento para fechar o toast
-    const closeBtn = toast.querySelector('.toast-close');
+    var closeBtn = toast.querySelector('.toast-close');
     if (closeBtn) {
         closeBtn.addEventListener('click', function() {
             container.removeChild(toast);
         });
     }
     
-// Remove automaticamente após 3 segundos
-    setTimeout(() => {
+    // Remove automaticamente após 3 segundos
+    setTimeout(function() {
         if (container.contains(toast)) {
             container.removeChild(toast);
         }
