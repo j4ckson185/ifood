@@ -10,7 +10,7 @@ window.AUTH = {
     // Credenciais de autenticação
     credentials: {
         client_id: 'e6415912-782e-4bd9-b6ea-af48c81ae323',
-        client_secret: '', // Segredo do cliente, se aplicável
+        client_secret: '137o75y57ug8fm55ubfoxlwjpl0xm25jxj18ne5mser23mbprj5nfncvfnr82utnzx73ij4h449o298370rjwpycppazsfyh2s0l', // Segredo do cliente, se aplicável
         merchantId: '2733980',
         merchantUuid: '3a9fc83b-ffc3-43e9-aeb6-36c9e827a143'
     },
