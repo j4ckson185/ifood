@@ -118,44 +118,55 @@ const AUTH = {
         return this.token.access_token;
     },
     
-    /**
-     * Realiza a autenticação para obter novos tokens
-     * @returns {Promise<Object>} - Dados do token
-     */
-    async authenticate() {
-        try {
-            if (!this.credentials.client_id || !this.credentials.client_secret) {
-                throw new Error('Credenciais não configuradas. Configure o Client ID e Client Secret nas configurações.');
-            }
-            
-            const response = await fetch(`${this.baseUrl}/oauth/token`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/x-www-form-urlencoded'
-                },
-                body: new URLSearchParams({
-                    'grant_type': 'client_credentials',
-                    'client_id': this.credentials.client_id,
-                    'client_secret': this.credentials.client_secret
-                })
-            });
-            
-            if (!response.ok) {
-                const errorData = await response.json();
-                throw new Error(`Erro de autenticação: ${errorData.error_description || response.statusText}`);
-            }
-            
-            const tokenData = await response.json();
-            this.saveToken(tokenData);
-            
-            showToast('success', 'Autenticação realizada com sucesso!');
-            return tokenData;
-        } catch (error) {
-            console.error('Erro na autenticação:', error);
-            showToast('error', error.message || 'Erro na autenticação');
-            throw error;
+/**
+ * Realiza a autenticação para obter novos tokens
+ * @returns {Promise<Object>} - Dados do token
+ */
+async authenticate() {
+    try {
+        if (!this.credentials.client_id || !this.credentials.client_secret) {
+            throw new Error('Credenciais não configuradas. Configure o Client ID e Client Secret nas configurações.');
         }
-    },
+        
+        const response = await fetch(`${this.baseUrl}/oauth/token`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded'
+            },
+            body: new URLSearchParams({
+                'grant_type': 'client_credentials',
+                'client_id': this.credentials.client_id,
+                'client_secret': this.credentials.client_secret
+            })
+        });
+        
+        if (!response.ok) {
+            const errorText = await response.text();
+            let errorData;
+            try {
+                errorData = JSON.parse(errorText);
+            } catch (e) {
+                errorData = { error_description: errorText || response.statusText };
+            }
+            throw new Error(`Erro de autenticação: ${errorData.error_description || response.statusText}`);
+        }
+        
+        const responseText = await response.text();
+        if (!responseText) {
+            throw new Error('Resposta de autenticação vazia');
+        }
+        
+        const tokenData = JSON.parse(responseText);
+        this.saveToken(tokenData);
+        
+        showToast('success', 'Autenticação realizada com sucesso!');
+        return tokenData;
+    } catch (error) {
+        console.error('Erro na autenticação:', error);
+        showToast('error', error.message || 'Erro na autenticação');
+        throw error;
+    }
+}
     
     /**
      * Renova o token usando o refresh_token
