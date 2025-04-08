@@ -97,18 +97,21 @@ window.AUTH = {
         try {
             showLoading(true);
 
-            const response = await fetch(this.baseUrl + '/authentication/v1.0/oauth/userCode', {
+            const response = await fetch(this.baseUrl + '/oauth/userCode', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
                 },
                 body: JSON.stringify({
-                    clientId: this.credentials.client_id
+                    clientId: this.credentials.client_id,
+                    grantType: 'authorization_code'
                 })
             });
 
             if (!response.ok) {
-                throw new Error('Falha ao gerar código de usuário');
+                const errorText = await response.text();
+                console.error('Resposta de erro:', errorText);
+                throw new Error('Falha ao gerar código de usuário: ' + errorText);
             }
 
             const data = await response.json();
