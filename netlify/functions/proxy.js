@@ -1,5 +1,8 @@
 // netlify/functions/proxy.js
 
+// Importe fetch para Node.js
+const fetch = require('node-fetch');
+
 exports.handler = async function(event, context) {
     // URL base da API do iFood
     const IFOOD_API_BASE = 'https://merchant-api.ifood.com.br';
@@ -79,7 +82,7 @@ exports.handler = async function(event, context) {
         
         return {
             statusCode: 500,
-            body: JSON.stringify({ error: 'Erro ao processar a requisição' }),
+            body: JSON.stringify({ error: 'Erro ao processar a requisição: ' + error.message }),
             headers: {
                 'Content-Type': 'application/json',
                 'Access-Control-Allow-Origin': '*',
