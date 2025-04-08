@@ -1,10 +1,16 @@
 // netlify/functions/proxy-api.js
 const fetch = require('node-fetch');
 
+const corsHeaders = {
+    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Polling-Merchants, user-code',
+    'Access-Control-Max-Age': '86400',
+};
+
 exports.handler = async function(event, context) {
     // URLs base da API do iFood
     const IFOOD_API_BASE = 'https://merchant-api.ifood.com.br';
-    const IFOOD_AUTH_BASE = 'https://merchant-api.ifood.com.br/authentication/v1.0';
     
     console.log("Requisição recebida:", {
         path: event.path,
@@ -17,12 +23,7 @@ exports.handler = async function(event, context) {
     if (event.httpMethod === 'OPTIONS') {
         return {
             statusCode: 204,
-            headers: {
-                'Access-Control-Allow-Origin': '*',
-                'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-                'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Polling-Merchants, user-code',
-                'Access-Control-Max-Age': '86400'
-            }
+            headers: corsHeaders
         };
     }
     
@@ -42,22 +43,17 @@ exports.handler = async function(event, context) {
         
         console.log("Caminho da API:", apiPath);
         
-        // URL completa para a API - trata caminhos especiais
+        // URL completa para a API
         let url;
-        if (apiPath.startsWith('/authentication/')) {
-            // Remove o prefixo '/authentication/' pois já está incluído na URL base de autenticação
-            const authPath = apiPath.replace('/authentication/', '');
-            url = `${IFOOD_AUTH_BASE}/${authPath}`;
-            console.log("URL para API de autenticação iFood:", url);
-        } else if (apiPath.includes('/oauth/')) {
-            url = `${IFOOD_AUTH_BASE}${apiPath}`;
+        if (apiPath.includes('/oauth/')) {
+            url = `${IFOOD_API_BASE}/authentication/v1.0${apiPath}`;
             console.log("URL para API de autenticação iFood:", url);
         } else {
             url = `${IFOOD_API_BASE}${apiPath}`;
             console.log("URL para API iFood:", url);
         }
         
-        // Prepara os headers
+        // Prepara os headers para o iFood
         const headers = {
             'Content-Type': 'application/json'
         };
@@ -76,7 +72,7 @@ exports.handler = async function(event, context) {
             }
         });
         
-        console.log("Headers enviados:", headers);
+        console.log("Headers para iFood:", headers);
         
         // Opções para fetch
         const options = {
@@ -95,10 +91,10 @@ exports.handler = async function(event, context) {
             body: options.body
         });
         
-        // Faz a requisição para a API
+        // Faz a requisição para a API do iFood
         console.log("Enviando requisição para iFood...");
         const response = await fetch(url, options);
-        console.log("Resposta recebida:", response.status, response.statusText);
+        console.log("Resposta do iFood:", response.status, response.statusText);
         
         // Obtém o corpo da resposta
         let responseBody;
@@ -117,14 +113,15 @@ exports.handler = async function(event, context) {
             responseBody = await response.text();
         }
         
-        // Retorna a resposta para o cliente
+        // Log da resposta
+        console.log("Corpo da resposta:", responseBody);
+        
+        // Retorna a resposta com headers CORS
         return {
             statusCode: response.status,
             headers: {
-                'Content-Type': contentType || 'application/json',
-                'Access-Control-Allow-Origin': '*',
-                'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Polling-Merchants, user-code',
-                'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS'
+                ...corsHeaders,
+                'Content-Type': contentType || 'application/json'
             },
             body: responseBody
         };
@@ -134,8 +131,8 @@ exports.handler = async function(event, context) {
         return {
             statusCode: 500,
             headers: {
-                'Content-Type': 'application/json',
-                'Access-Control-Allow-Origin': '*'
+                ...corsHeaders,
+                'Content-Type': 'application/json'
             },
             body: JSON.stringify({
                 error: 'Erro no proxy',
