@@ -97,15 +97,17 @@ window.AUTH = {
         try {
             showLoading(true);
 
+            // Prepara os dados como form-url-encoded
+            const formData = new URLSearchParams();
+            formData.append('clientId', this.credentials.client_id);
+            formData.append('grantType', 'authorization_code');
+
             const response = await fetch(this.baseUrl + '/oauth/userCode', {
                 method: 'POST',
                 headers: {
-                    'Content-Type': 'application/json'
+                    'Content-Type': 'application/x-www-form-urlencoded'
                 },
-                body: JSON.stringify({
-                    clientId: this.credentials.client_id,
-                    grantType: 'authorization_code'
-                })
+                body: formData.toString()
             });
 
             if (!response.ok) {
