@@ -207,62 +207,82 @@ const AUTH = {
         };
     },
     
-    /**
-     * Realiza uma requisição autenticada à API
-     * @param {string} endpoint - Endpoint da API (sem a URL base)
-     * @param {Object} options - Opções da requisição fetch
-     * @returns {Promise<Object>} - Resposta da API
-     */
-    async apiRequest(endpoint, options = {}) {
-        try {
-            const headers = await this.getAuthHeaders();
+/**
+ * Realiza uma requisição autenticada à API
+ * @param {string} endpoint - Endpoint da API (sem a URL base)
+ * @param {Object} options - Opções da requisição fetch
+ * @returns {Promise<Object|string>} - Resposta da API
+ */
+async apiRequest(endpoint, options = {}) {
+    try {
+        const headers = await this.getAuthHeaders();
+        
+        const response = await fetch(`${this.baseUrl}${endpoint}`, {
+            ...options,
+            headers: {
+                ...headers,
+                ...options.headers
+            }
+        });
+        
+        // Se receber erro de autenticação, tenta renovar o token e refazer a requisição
+        if (response.status === 401) {
+            console.log('Token inválido. Renovando e repetindo requisição...');
+            await this.authenticate();
             
-            const response = await fetch(`${this.baseUrl}${endpoint}`, {
+            // Refaz a requisição com o novo token
+            const newHeaders = await this.getAuthHeaders();
+            const newResponse = await fetch(`${this.baseUrl}${endpoint}`, {
                 ...options,
                 headers: {
-                    ...headers,
+                    ...newHeaders,
                     ...options.headers
                 }
             });
             
-            // Se receber erro de autenticação, tenta renovar o token e refazer a requisição
-            if (response.status === 401) {
-                console.log('Token inválido. Renovando e repetindo requisição...');
-                await this.authenticate();
-                
-                // Refaz a requisição com o novo token
-                const newHeaders = await this.getAuthHeaders();
-                const newResponse = await fetch(`${this.baseUrl}${endpoint}`, {
-                    ...options,
-                    headers: {
-                        ...newHeaders,
-                        ...options.headers
-                    }
-                });
-                
-                if (!newResponse.ok) {
-                    const errorData = await newResponse.json().catch(() => ({}));
-                    throw new Error(`Erro na requisição: ${errorData.message || newResponse.statusText}`);
+            if (!newResponse.ok) {
+                const errorText = await newResponse.text();
+                let errorData;
+                try {
+                    errorData = JSON.parse(errorText);
+                } catch (e) {
+                    errorData = { message: errorText || newResponse.statusText };
                 }
-                
-                return await newResponse.json();
-            }
-            
-            if (!response.ok) {
-                const errorData = await response.json().catch(() => ({}));
-                throw new Error(`Erro na requisição: ${errorData.message || response.statusText}`);
+                throw new Error(`Erro na requisição: ${errorData.message || newResponse.statusText}`);
             }
             
             // Verifica se a resposta é JSON
-            const contentType = response.headers.get('content-type');
+            const contentType = newResponse.headers.get('content-type');
             if (contentType && contentType.includes('application/json')) {
-                return await response.json();
+                const text = await newResponse.text();
+                return text ? JSON.parse(text) : null;
             }
             
-            return await response.text();
-        } catch (error) {
-            console.error(`Erro na requisição para ${endpoint}:`, error);
-            throw error;
+            return await newResponse.text();
         }
+        
+        if (!response.ok) {
+            const errorText = await response.text();
+            let errorData;
+            try {
+                errorData = JSON.parse(errorText);
+            } catch (e) {
+                errorData = { message: errorText || response.statusText };
+            }
+            throw new Error(`Erro na requisição: ${errorData.message || response.statusText}`);
+        }
+        
+        // Verifica se a resposta é JSON
+        const contentType = response.headers.get('content-type');
+        if (contentType && contentType.includes('application/json')) {
+            const text = await response.text();
+            return text ? JSON.parse(text) : null;
+        }
+        
+        return await response.text();
+    } catch (error) {
+        console.error(`Erro na requisição para ${endpoint}:`, error);
+        throw error;
     }
+}
 };
