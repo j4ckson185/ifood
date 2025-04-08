@@ -1,0 +1,554 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>iFood PDV - Homologação</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Sidebar / Menu lateral -->
+        <aside class="sidebar">
+            <div class="logo">
+                <img src="https://parceiros.ifood.com.br/static/media/logo-white.2e256502.svg" alt="iFood Logo">
+            </div>
+            <nav class="sidebar-menu">
+                <button class="menu-item active" data-section="dashboard">
+                    <i class="fas fa-home"></i>
+                    <span>Dashboard</span>
+                </button>
+                <button class="menu-item" data-section="merchant">
+                    <i class="fas fa-store"></i>
+                    <span>Loja</span>
+                </button>
+                <button class="menu-item" data-section="orders">
+                    <i class="fas fa-clipboard-list"></i>
+                    <span>Pedidos</span>
+                </button>
+                <button class="menu-item" data-section="reviews">
+                    <i class="fas fa-star"></i>
+                    <span>Avaliações</span>
+                </button>
+                <button class="menu-item" data-section="settings">
+                    <i class="fas fa-cog"></i>
+                    <span>Configurações</span>
+                </button>
+            </nav>
+            <div class="merchant-info">
+                <div class="merchant-avatar">
+                    <i class="fas fa-store"></i>
+                </div>
+                <div class="merchant-details">
+                    <div class="merchant-name">Loja iFood</div>
+                    <div class="merchant-id">ID: <span id="merchant-id-display">-</span></div>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Conteúdo Principal -->
+        <main class="main-content">
+            <!-- Header -->
+            <header class="header">
+                <div class="header-left">
+                    <button id="sidebar-toggle" class="sidebar-toggle">
+                        <i class="fas fa-bars"></i>
+                    </button>
+                    <h1 id="current-section-title">Dashboard</h1>
+                </div>
+                <div class="header-right">
+                    <div class="store-status">
+                        <span class="status-label">Status:</span>
+                        <span id="store-status" class="status-value">Verificando...</span>
+                    </div>
+                    <div class="user-menu">
+                        <span id="user-name">Admin</span>
+                        <img src="https://via.placeholder.com/40" alt="User" class="user-avatar">
+                    </div>
+                </div>
+            </header>
+
+            <!-- Seções de conteúdo -->
+            <div id="content-sections">
+                <!-- Dashboard Section -->
+                <section id="dashboard" class="content-section active">
+                    <div class="dashboard-header">
+                        <h2>Visão geral</h2>
+                        <div class="date-filter">
+                            <input type="date" id="date-filter" value="">
+                        </div>
+                    </div>
+                    
+                    <div class="dashboard-stats">
+                        <div class="stat-card">
+                            <div class="stat-icon"><i class="fas fa-clipboard-list"></i></div>
+                            <div class="stat-info">
+                                <div class="stat-value" id="total-orders">0</div>
+                                <div class="stat-label">Pedidos Hoje</div>
+                            </div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-icon"><i class="fas fa-money-bill-wave"></i></div>
+                            <div class="stat-info">
+                                <div class="stat-value" id="total-revenue">R$ 0,00</div>
+                                <div class="stat-label">Faturamento</div>
+                            </div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-icon"><i class="fas fa-star"></i></div>
+                            <div class="stat-info">
+                                <div class="stat-value" id="avg-rating">0.0</div>
+                                <div class="stat-label">Avaliação Média</div>
+                            </div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-icon"><i class="fas fa-clock"></i></div>
+                            <div class="stat-info">
+                                <div class="stat-value" id="avg-time">0 min</div>
+                                <div class="stat-label">Tempo Médio</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="orders-queue">
+                        <div class="section-header">
+                            <h3>Pedidos Recentes</h3>
+                            <button id="refresh-orders" class="refresh-btn">
+                                <i class="fas fa-sync-alt"></i> Atualizar
+                            </button>
+                        </div>
+                        <div id="orders-container" class="orders-container">
+                            <!-- Os cards de pedidos serão inseridos aqui via JavaScript -->
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Merchant Section -->
+                <section id="merchant" class="content-section">
+                    <div class="section-header">
+                        <h2>Gerenciamento da Loja</h2>
+                        <button id="refresh-merchant" class="refresh-btn">
+                            <i class="fas fa-sync-alt"></i> Atualizar
+                        </button>
+                    </div>
+
+                    <div class="merchant-details-container">
+                        <div class="merchant-card">
+                            <h3>Informações da Loja</h3>
+                            <div id="merchant-details-content" class="merchant-content">
+                                <div class="info-item">
+                                    <span class="info-label">Nome:</span>
+                                    <span id="merchant-name" class="info-value">-</span>
+                                </div>
+                                <div class="info-item">
+                                    <span class="info-label">ID:</span>
+                                    <span id="merchant-id" class="info-value">-</span>
+                                </div>
+                                <div class="info-item">
+                                    <span class="info-label">UUID:</span>
+                                    <span id="merchant-uuid" class="info-value">-</span>
+                                </div>
+                                <div class="info-item">
+                                    <span class="info-label">Endereço:</span>
+                                    <span id="merchant-address" class="info-value">-</span>
+                                </div>
+                                <div class="info-item">
+                                    <span class="info-label">Telefone:</span>
+                                    <span id="merchant-phone" class="info-value">-</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="merchant-card">
+                            <h3>Status da Loja</h3>
+                            <div id="merchant-status-content" class="merchant-content">
+                                <div class="info-item">
+                                    <span class="info-label">Status atual:</span>
+                                    <span id="merchant-current-status" class="info-value">-</span>
+                                </div>
+                                <div class="status-controls">
+                                    <button id="toggle-store-status" class="primary-btn">
+                                        Alterar Status
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="merchant-controls">
+                        <div class="merchant-card">
+                            <h3>Horário de Funcionamento</h3>
+                            <div id="opening-hours-content" class="merchant-content">
+                                <div id="opening-hours-list">
+                                    <!-- Horários serão inseridos aqui via JavaScript -->
+                                </div>
+                                <div class="opening-hours-controls">
+                                    <button id="edit-opening-hours" class="secondary-btn">
+                                        <i class="fas fa-edit"></i> Editar Horários
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="merchant-card">
+                            <h3>Interrupções</h3>
+                            <div id="interruptions-content" class="merchant-content">
+                                <div id="interruptions-list">
+                                    <!-- Interrupções serão inseridas aqui via JavaScript -->
+                                </div>
+                                <div class="interruptions-controls">
+                                    <button id="create-interruption" class="secondary-btn">
+                                        <i class="fas fa-pause"></i> Criar Interrupção
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Orders Section -->
+                <section id="orders" class="content-section">
+                    <div class="section-header">
+                        <h2>Pedidos</h2>
+                        <div class="order-controls">
+                            <select id="order-filter" class="filter-select">
+                                <option value="all">Todos os pedidos</option>
+                                <option value="pending">Pendentes</option>
+                                <option value="confirmed">Confirmados</option>
+                                <option value="dispatched">Despachados</option>
+                                <option value="delivered">Entregues</option>
+                                <option value="cancelled">Cancelados</option>
+                            </select>
+                            <button id="refresh-orders-section" class="refresh-btn">
+                                <i class="fas fa-sync-alt"></i> Atualizar
+                            </button>
+                        </div>
+                    </div>
+
+                    <div id="orders-list-container" class="orders-list-container">
+                        <!-- Os pedidos serão inseridos aqui via JavaScript -->
+                    </div>
+                </section>
+
+                <!-- Reviews Section -->
+                <section id="reviews" class="content-section">
+                    <div class="section-header">
+                        <h2>Avaliações</h2>
+                        <button id="refresh-reviews" class="refresh-btn">
+                            <i class="fas fa-sync-alt"></i> Atualizar
+                        </button>
+                    </div>
+
+                    <div class="reviews-policy">
+                        <h3>Política de Avaliações</h3>
+                        <p>As avaliações são uma parte importante do feedback dos clientes. Consulte a <a href="https://developer.ifood.com.br/pt-BR/docs/guides/reviews-policy" target="_blank">Política de Avaliações do iFood</a> para mais detalhes.</p>
+                    </div>
+
+                    <div id="reviews-list" class="reviews-list">
+                        <!-- As avaliações serão inseridas aqui via JavaScript -->
+                    </div>
+                </section>
+
+                <!-- Settings Section -->
+                <section id="settings" class="content-section">
+                    <div class="section-header">
+                        <h2>Configurações</h2>
+                    </div>
+
+                    <div class="settings-card">
+                        <h3>Configurações de API</h3>
+                        <div class="settings-form">
+                            <div class="form-group">
+                                <label for="client-id">Client ID:</label>
+                                <input type="text" id="client-id" placeholder="Digite seu Client ID">
+                            </div>
+                            <div class="form-group">
+                                <label for="client-secret">Client Secret:</label>
+                                <input type="password" id="client-secret" placeholder="Digite seu Client Secret">
+                            </div>
+                            <div class="form-group">
+                                <label for="merchant-id-input">ID da Loja:</label>
+                                <input type="text" id="merchant-id-input" placeholder="ID da Loja (ex: 2733980)" value="2733980">
+                            </div>
+                            <div class="form-group">
+                                <label for="merchant-uuid-input">UUID da Loja:</label>
+                                <input type="text" id="merchant-uuid-input" placeholder="UUID da Loja" value="3a9fc83b-ffc3-43e9-aeb6-36c9e827a143">
+                            </div>
+                            <button id="save-settings" class="primary-btn">Salvar Configurações</button>
+                        </div>
+                    </div>
+
+                    <div class="settings-card">
+                        <h3>Preferências</h3>
+                        <div class="settings-form">
+                            <div class="form-group checkbox">
+                                <input type="checkbox" id="auto-refresh" checked>
+                                <label for="auto-refresh">Atualizar pedidos automaticamente (30s)</label>
+                            </div>
+                            <div class="form-group checkbox">
+                                <input type="checkbox" id="sound-alert" checked>
+                                <label for="sound-alert">Alerta sonoro para novos pedidos</label>
+                            </div>
+                            <div class="form-group checkbox">
+                                <input type="checkbox" id="dark-mode">
+                                <label for="dark-mode">Modo escuro</label>
+                            </div>
+                            <button id="save-preferences" class="primary-btn">Salvar Preferências</button>
+                        </div>
+                    </div>
+                </section>
+            </div>
+        </main>
+    </div>
+
+    <!-- Modais -->
+    <!-- Modal de Detalhes do Pedido -->
+    <div id="order-details-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Detalhes do Pedido #<span id="modal-order-id">-</span></h2>
+                <button class="close-modal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="order-overview">
+                    <div class="order-status-badge" id="modal-order-status">
+                        Pendente
+                    </div>
+                    <div class="order-info">
+                        <div class="info-col">
+                            <div class="info-group">
+                                <span class="info-label">Tipo de pedido:</span>
+                                <span id="modal-order-type" class="info-value">-</span>
+                            </div>
+                            <div class="info-group">
+                                <span class="info-label">Data/Hora:</span>
+                                <span id="modal-order-datetime" class="info-value">-</span>
+                            </div>
+                            <div class="info-group">
+                                <span class="info-label">Código de coleta:</span>
+                                <span id="modal-pickup-code" class="info-value">-</span>
+                            </div>
+                        </div>
+                        <div class="info-col">
+                            <div class="info-group">
+                                <span class="info-label">Forma de Pagamento:</span>
+                                <span id="modal-payment-method" class="info-value">-</span>
+                            </div>
+                            <div class="info-group">
+                                <span class="info-label">Valor:</span>
+                                <span id="modal-order-total" class="info-value">-</span>
+                            </div>
+                            <div class="info-group">
+                                <span class="info-label">CPF/CNPJ:</span>
+                                <span id="modal-customer-tax-id" class="info-value">-</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="order-sections">
+                    <div class="order-section">
+                        <h3>Cliente</h3>
+                        <div class="order-customer-info">
+                            <div class="info-group">
+                                <span class="info-label">Nome:</span>
+                                <span id="modal-customer-name" class="info-value">-</span>
+                            </div>
+                            <div class="info-group">
+                                <span class="info-label">Telefone:</span>
+                                <span id="modal-customer-phone" class="info-value">-</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="order-section" id="modal-delivery-section">
+                        <h3>Entrega</h3>
+                        <div class="order-delivery-info">
+                            <div class="info-group">
+                                <span class="info-label">Endereço:</span>
+                                <span id="modal-delivery-address" class="info-value">-</span>
+                            </div>
+                            <div class="info-group">
+                                <span class="info-label">Observações:</span>
+                                <span id="modal-delivery-notes" class="info-value">-</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="order-section">
+                        <h3>Itens do Pedido</h3>
+                        <div id="modal-order-items" class="order-items-list">
+                            <!-- Itens serão inseridos aqui via JavaScript -->
+                        </div>
+                    </div>
+
+                    <div class="order-section">
+                        <h3>Resumo</h3>
+                        <div class="order-summary">
+                            <div class="summary-row">
+                                <span class="summary-label">Subtotal:</span>
+                                <span id="modal-subtotal" class="summary-value">-</span>
+                            </div>
+                            <div class="summary-row" id="modal-discount-row">
+                                <span class="summary-label">Desconto:</span>
+                                <div class="discount-details">
+                                    <span id="modal-discount-value" class="summary-value">-</span>
+                                    <span id="modal-discount-sponsor" class="discount-sponsor">-</span>
+                                </div>
+                            </div>
+                            <div class="summary-row" id="modal-delivery-fee-row">
+                                <span class="summary-label">Taxa de Entrega:</span>
+                                <span id="modal-delivery-fee" class="summary-value">-</span>
+                            </div>
+                            <div class="summary-row total-row">
+                                <span class="summary-label">Total:</span>
+                                <span id="modal-total" class="summary-value">-</span>
+                            </div>
+                            <div class="summary-row" id="modal-change-row">
+                                <span class="summary-label">Troco para:</span>
+                                <span id="modal-change-for" class="summary-value">-</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <div class="order-actions">
+                    <button id="modal-confirm-order" class="action-btn confirm-btn">
+                        <i class="fas fa-check"></i> Confirmar
+                    </button>
+                    <button id="modal-dispatch-order" class="action-btn dispatch-btn">
+                        <i class="fas fa-truck"></i> Despachar
+                    </button>
+                    <button id="modal-ready-order" class="action-btn ready-btn">
+                        <i class="fas fa-thumbs-up"></i> Pronto para Retirada
+                    </button>
+                    <button id="modal-cancel-order" class="action-btn cancel-btn">
+                        <i class="fas fa-times"></i> Cancelar
+                    </button>
+                    <button id="modal-print-order" class="action-btn print-btn">
+                        <i class="fas fa-print"></i> Imprimir
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de Cancelamento -->
+    <div id="cancel-order-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Cancelar Pedido</h2>
+                <button class="close-modal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <p>Selecione o motivo do cancelamento:</p>
+                <div class="form-group">
+                    <select id="cancel-reason" class="full-width">
+                        <!-- Opções serão inseridas via JavaScript -->
+                    </select>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button id="confirm-cancel" class="action-btn cancel-btn">Confirmar Cancelamento</button>
+                <button class="close-modal-btn">Voltar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de Interrupção -->
+    <div id="interruption-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Criar Interrupção</h2>
+                <button class="close-modal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label for="interruption-start">Início:</label>
+                    <input type="datetime-local" id="interruption-start" class="full-width">
+                </div>
+                <div class="form-group">
+                    <label for="interruption-end">Fim:</label>
+                    <input type="datetime-local" id="interruption-end" class="full-width">
+                </div>
+                <div class="form-group">
+                    <label for="interruption-reason">Motivo:</label>
+                    <select id="interruption-reason" class="full-width">
+                        <option value="STOCK_OUT_OF_PRODUCTS">Falta de Produtos</option>
+                        <option value="NO_DELIVERY_PROVIDERS_AVAILABLE">Sem Entregadores</option>
+                        <option value="TECHNICAL_PROBLEMS">Problemas Técnicos</option>
+                        <option value="OTHER">Outro</option>
+                    </select>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button id="confirm-interruption" class="primary-btn">Criar Interrupção</button>
+                <button class="close-modal-btn">Cancelar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de Horário de Funcionamento -->
+    <div id="opening-hours-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Horário de Funcionamento</h2>
+                <button class="close-modal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div id="opening-hours-form">
+                    <!-- Dias da semana serão inseridos via JavaScript -->
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button id="save-opening-hours" class="primary-btn">Salvar Horários</button>
+                <button class="close-modal-btn">Cancelar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de Resposta à Avaliação -->
+    <div id="review-reply-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Responder Avaliação</h2>
+                <button class="close-modal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="review-details">
+                    <div class="review-rating">
+                        <span id="modal-review-rating">★★★★★</span>
+                        <span id="modal-review-date" class="review-date">00/00/0000</span>
+                    </div>
+                    <div class="review-text" id="modal-review-text">
+                        Texto da avaliação...
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="review-reply">Sua resposta:</label>
+                    <textarea id="review-reply" class="full-width" rows="4" placeholder="Digite sua resposta..."></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button id="send-review-reply" class="primary-btn">Enviar Resposta</button>
+                <button class="close-modal-btn">Cancelar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toasts para notificações -->
+    <div id="toast-container" class="toast-container"></div>
+
+    <!-- Sons para notificações -->
+    <audio id="new-order-sound" src="https://cdn.pixabay.com/download/audio/2022/03/15/audio_c8c8a73467.mp3?filename=notification-sound-7062.mp3" preload="auto"></audio>
+
+    <!-- Scripts -->
+    <script src="auth.js"></script>
+    <script src="merchant.js"></script>
+    <script src="orders.js"></script>
+    <script src="reviews.js"></script>
+    <script src="script.js"></script>
+</body>
+</html>
