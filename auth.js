@@ -10,8 +10,8 @@ AUTH = {
     
     // Credenciais de autenticação
     credentials: {
-        client_id: '',
-        client_secret: '',
+        client_id: '6015fafa-fd3e-4053-9080-bfdbf6e78526',
+        client_secret: 'p1jv9gtn6loszhrl6tmcpwaeuk21w4ukrudeinuzfwihb9fqdutubsbbggav8rkbsiqgik45kdgdp471ua2ivmh25dz7mywcfc4',
         merchantId: '2733980',
         merchantUuid: '3a9fc83b-ffc3-43e9-aeb6-36c9e827a143'
     },
@@ -31,19 +31,51 @@ AUTH = {
         // Carrega as credenciais do localStorage
         var savedCredentials = localStorage.getItem('ifood_credentials');
         if (savedCredentials) {
-            this.credentials = JSON.parse(savedCredentials);
+            try {
+                var parsed = JSON.parse(savedCredentials);
+                // Mantenha as credenciais padrão se não houver no localStorage
+                this.credentials.client_id = parsed.client_id || this.credentials.client_id;
+                this.credentials.client_secret = parsed.client_secret || this.credentials.client_secret;
+                this.credentials.merchantId = parsed.merchantId || this.credentials.merchantId;
+                this.credentials.merchantUuid = parsed.merchantUuid || this.credentials.merchantUuid;
+            } catch (e) {
+                console.error("Erro ao analisar credenciais salvas:", e);
+            }
         }
         
         // Carrega o token do localStorage
         var savedToken = localStorage.getItem('ifood_token');
         if (savedToken) {
-            this.token = JSON.parse(savedToken);
+            try {
+                this.token = JSON.parse(savedToken);
+            } catch (e) {
+                console.error("Erro ao analisar token salvo:", e);
+            }
         }
         
         // Atualiza a UI com o ID do merchant
         if (document.getElementById('merchant-id-display')) {
             document.getElementById('merchant-id-display').textContent = this.credentials.merchantId;
         }
+        
+        // Preencher campos do formulário de configurações com valores atuais
+        this.updateSettingsForm();
+    },
+    
+    /**
+     * Atualiza os campos do formulário de configurações
+     */
+    updateSettingsForm: function() {
+        // Preenche os campos com as credenciais atuais
+        var clientIdInput = document.getElementById('client-id');
+        var clientSecretInput = document.getElementById('client-secret');
+        var merchantIdInput = document.getElementById('merchant-id-input');
+        var merchantUuidInput = document.getElementById('merchant-uuid-input');
+        
+        if (clientIdInput) clientIdInput.value = this.credentials.client_id;
+        if (clientSecretInput) clientSecretInput.value = this.credentials.client_secret;
+        if (merchantIdInput) merchantIdInput.value = this.credentials.merchantId;
+        if (merchantUuidInput) merchantUuidInput.value = this.credentials.merchantUuid;
     },
     
     /**
@@ -51,13 +83,22 @@ AUTH = {
      * @param {Object} credentials - Credenciais de autenticação
      */
     saveCredentials: function(credentials) {
-        this.credentials = Object.assign({}, this.credentials, credentials);
+        var updated = {
+            client_id: credentials.client_id || this.credentials.client_id,
+            client_secret: credentials.client_secret || this.credentials.client_secret,
+            merchantId: credentials.merchantId || this.credentials.merchantId,
+            merchantUuid: credentials.merchantUuid || this.credentials.merchantUuid
+        };
+        
+        this.credentials = updated;
         localStorage.setItem('ifood_credentials', JSON.stringify(this.credentials));
         
         // Atualiza a UI com o ID do merchant
         if (document.getElementById('merchant-id-display')) {
             document.getElementById('merchant-id-display').textContent = this.credentials.merchantId;
         }
+        
+        console.log("Credenciais salvas:", this.credentials);
     },
     
     /**
@@ -76,6 +117,7 @@ AUTH = {
         };
         
         localStorage.setItem('ifood_token', JSON.stringify(this.token));
+        console.log("Token salvo, expira em:", new Date(expiresAt).toLocaleString());
     },
     
     /**
@@ -146,36 +188,59 @@ AUTH = {
                     throw new Error('Credenciais não configuradas. Configure o Client ID e Client Secret nas configurações.');
                 }
                 
+                console.log("Tentando autenticar com:", {
+                    client_id: self.credentials.client_id,
+                    client_secret: self.credentials.client_secret.substring(0, 10) + "..." // Mostrar apenas parte do secret por segurança
+                });
+                
+                var formData = new URLSearchParams();
+                formData.append('grant_type', 'client_credentials');
+                formData.append('client_id', self.credentials.client_id);
+                formData.append('client_secret', self.credentials.client_secret);
+                
                 fetch(self.baseUrl + '/oauth/token', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/x-www-form-urlencoded'
                     },
-                    body: new URLSearchParams({
-                        'grant_type': 'client_credentials',
-                        'client_id': self.credentials.client_id,
-                        'client_secret': self.credentials.client_secret
-                    })
+                    body: formData
                 })
                 .then(function(response) {
+                    console.log("Resposta de autenticação:", response.status);
+                    
                     if (!response.ok) {
                         return response.text().then(function(text) {
+                            console.error("Texto de erro:", text);
+                            
                             var errorData;
                             try {
                                 errorData = JSON.parse(text);
+                                console.error("Dados de erro:", errorData);
                             } catch (e) {
                                 errorData = { error_description: text || response.statusText };
                             }
+                            
                             throw new Error('Erro de autenticação: ' + (errorData.error_description || response.statusText));
                         });
                     }
                     return response.text();
                 })
                 .then(function(text) {
+                    console.log("Texto da resposta:", text ? "Recebido" : "Vazio");
+                    
                     if (!text) {
                         throw new Error('Resposta de autenticação vazia');
                     }
-                    var tokenData = JSON.parse(text);
+                    
+                    var tokenData;
+                    try {
+                        tokenData = JSON.parse(text);
+                        console.log("Token recebido:", tokenData.access_token ? "Válido" : "Inválido");
+                    } catch (e) {
+                        console.error("Erro ao parsejar token:", e);
+                        throw new Error('Resposta inválida: ' + e.message);
+                    }
+                    
                     self.saveToken(tokenData);
                     
                     showToast('success', 'Autenticação realizada com sucesso!');
@@ -209,15 +274,16 @@ AUTH = {
                         .catch(reject);
                 }
                 
+                var formData = new URLSearchParams();
+                formData.append('grant_type', 'refresh_token');
+                formData.append('refresh_token', self.token.refresh_token);
+                
                 fetch(self.baseUrl + '/oauth/token', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/x-www-form-urlencoded'
                     },
-                    body: new URLSearchParams({
-                        'grant_type': 'refresh_token',
-                        'refresh_token': self.token.refresh_token
-                    })
+                    body: formData
                 })
                 .then(function(response) {
                     if (!response.ok) {
@@ -277,6 +343,7 @@ AUTH = {
                         headers: Object.assign({}, headers, options.headers || {})
                     });
                     
+                    console.log("Fazendo requisição para:", endpoint);
                     return fetch(self.baseUrl + endpoint, fetchOptions);
                 })
                 .then(function(response) {
@@ -297,14 +364,20 @@ AUTH = {
                     return response;
                 })
                 .then(function(response) {
+                    console.log("Resposta da API:", response.status, response.statusText);
+                    
                     if (!response.ok) {
                         return response.text().then(function(text) {
+                            console.error("Texto de erro:", text);
+                            
                             var errorData;
                             try {
                                 errorData = JSON.parse(text);
+                                console.error("Dados de erro:", errorData);
                             } catch (e) {
                                 errorData = { message: text || response.statusText };
                             }
+                            
                             throw new Error('Erro na requisição: ' + (errorData.message || response.statusText));
                         });
                     }
@@ -313,7 +386,17 @@ AUTH = {
                     var contentType = response.headers.get('content-type');
                     if (contentType && contentType.includes('application/json')) {
                         return response.text().then(function(text) {
-                            return text ? JSON.parse(text) : null;
+                            if (!text) {
+                                console.log("Resposta vazia com content-type JSON");
+                                return null;
+                            }
+                            
+                            try {
+                                return JSON.parse(text);
+                            } catch (e) {
+                                console.error("Erro ao parsejar resposta JSON:", e, "Texto:", text);
+                                return text;
+                            }
                         });
                     }
                     
