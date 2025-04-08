@@ -254,17 +254,25 @@ window.ORDERS = {
     /**
      * Faz uma chamada de polling para verificar novos eventos (Critério: Receber eventos via polling)
      */
-    pollForEvents: async function() {
+pollForEvents: async function() {
         try {
             if (!this.pollingEnabled) return;
+            
+            // Verifica se AUTH está configurado
+            if (!window.AUTH || !window.AUTH.credentials) {
+                console.error('Módulo AUTH não configurado corretamente');
+                return;
+            }
             
             console.log('Verificando novos eventos...');
             this.lastPollTime = new Date();
             
             // Define o merchant ID para o header de filtragem
-            const merchantId = AUTH.credentials.merchantId;
+            const merchantId = window.AUTH.credentials.merchantId;
             if (!merchantId) {
-                throw new Error('ID do merchant não configurado');
+                console.error('ID do merchant não configurado');
+                showToast('error', 'Configure o ID do merchant nas configurações');
+                return;
             }
             
             // Faz a requisição de polling com o header x-polling-merchants
@@ -277,6 +285,7 @@ window.ORDERS = {
                 });
             } catch (error) {
                 console.warn('Erro no polling, tentando continuar:', error);
+                showToast('warning', 'Erro ao verificar novos eventos');
                 return; // Continua a execução mesmo com erro
             }
             
@@ -294,7 +303,7 @@ window.ORDERS = {
             }
         } catch (error) {
             console.error('Erro no polling de eventos:', error);
-            // Não propaga o erro para permitir que o polling continue
+            showToast('error', 'Erro ao verificar eventos');
         }
     },
     
