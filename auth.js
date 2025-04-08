@@ -167,21 +167,37 @@ window.AUTH = {
 
     // Inicia a verificação periódica do status da autenticação
     startAuthCheck: function() {
+        console.log('Iniciando verificação periódica...');
+        
+        // Limpa qualquer intervalo existente
         if (this._authCheckInterval) {
             clearInterval(this._authCheckInterval);
         }
 
+        // Faz a primeira verificação imediatamente
+        this.checkAuthStatus();
+
+        // Define o intervalo para verificações subsequentes
+        // Usa um intervalo mínimo de 5 segundos ou o intervalo sugerido pela API
+        const checkInterval = Math.max(5, this.userCodeInfo.interval || 5) * 1000;
+        console.log(`Configurando verificação a cada ${checkInterval/1000} segundos`);
+
         this._authCheckInterval = setInterval(() => {
             this.checkAuthStatus();
-        }, this.userCodeInfo.interval * 1000);
+        }, checkInterval);
 
-        // Limpa o intervalo após o tempo de expiração
+        // Define um timeout para parar as verificações após o tempo de expiração
+        const expiresIn = (this.userCodeInfo.expiresIn || 600) * 1000; // 10 minutos padrão
+        console.log(`Verificação será interrompida em ${expiresIn/1000} segundos`);
+
         setTimeout(() => {
             if (this._authCheckInterval) {
+                console.log('Tempo expirado, parando verificação');
                 clearInterval(this._authCheckInterval);
                 this._authCheckInterval = null;
+                showToast('warning', 'Tempo de autenticação expirou. Gere um novo código se necessário.');
             }
-        }, this.userCodeInfo.expiresIn * 1000);
+        }, expiresIn);
     },
 
     // Verifica o status da autenticação
