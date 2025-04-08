@@ -1,4 +1,4 @@
-// netlify/functions/proxy-api.js - atualize esta parte
+// netlify/functions/proxy-api.js
 exports.handler = async function(event, context) {
   // URLs base da API do iFood
   const IFOOD_API_BASE = 'https://merchant-api.ifood.com.br';
@@ -6,7 +6,8 @@ exports.handler = async function(event, context) {
   // Log para depuração
   console.log("Requisição recebida:", {
     path: event.path,
-    httpMethod: event.httpMethod
+    httpMethod: event.httpMethod,
+    body: event.body // Log do corpo da requisição
   });
   
   // Tratamento de CORS para preflight
@@ -56,16 +57,15 @@ exports.handler = async function(event, context) {
     }
     
     // Prepara os headers
-    const headers = {};
+    const headers = {
+      'Content-Type': 'application/x-www-form-urlencoded'
+    };
     
     // Copia headers relevantes
     Object.keys(event.headers).forEach(key => {
       const lowerKey = key.toLowerCase();
       if (lowerKey === 'authorization') {
         headers['Authorization'] = event.headers[key];
-      }
-      if (lowerKey === 'content-type') {
-        headers['Content-Type'] = event.headers[key];
       }
       if (lowerKey === 'x-polling-merchants') {
         headers['X-Polling-Merchants'] = event.headers[key];
@@ -81,9 +81,26 @@ exports.handler = async function(event, context) {
     };
     
     // Para métodos com body, adiciona o body
-    if (['POST', 'PUT', 'PATCH'].includes(event.httpMethod) && event.body) {
-      options.body = event.body;
+    // Para oauth/token, garante que o grant_type esteja presente
+    if (['POST', 'PUT', 'PATCH'].includes(event.httpMethod)) {
+      if (event.body) {
+        // Para token, adiciona grant_type se não estiver presente
+        if (apiPath.includes('/oauth/token')) {
+          const bodyParams = new URLSearchParams(event.body);
+          if (!bodyParams.get('grant_type')) {
+            bodyParams.set('grant_type', 'client_credentials');
+          }
+          options.body = bodyParams.toString();
+        } else {
+          options.body = event.body;
+        }
+      } else if (apiPath.includes('/oauth/token')) {
+        // Se não há body, cria um com grant_type
+        options.body = 'grant_type=client_credentials';
+      }
     }
+    
+    console.log("Corpo da requisição:", options.body);
     
     // Faz a requisição para a API
     console.log("Enviando requisição para iFood...");
