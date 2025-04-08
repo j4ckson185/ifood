@@ -168,10 +168,11 @@ window.AUTH = {
                     client_secret: "******" // segurança
                 });
                 
-                var formData = new URLSearchParams();
-                formData.append('grant_type', 'client_credentials');
-                formData.append('client_id', self.credentials.client_id);
-                formData.append('client_secret', self.credentials.client_secret);
+// Dentro da função authenticate, modifique a criação do formData
+var formData = new URLSearchParams();
+formData.append('grant_type', 'client_credentials'); // Sempre definir
+formData.append('client_id', this.credentials.client_id);
+formData.append('client_secret', this.credentials.client_secret);
                 
                 fetch(self.baseUrl + '/oauth/token', {
                     method: 'POST',
