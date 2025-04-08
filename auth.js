@@ -5,7 +5,7 @@
 // Atribuir ao objeto global
 window.AUTH = {
     // URL base para a API de produção
-    baseUrl: 'https://merchant-api.ifood.com.br',
+    baseUrl: '/.netlify/functions/proxy-api',
     
     // Credenciais de autenticação
     credentials: {
