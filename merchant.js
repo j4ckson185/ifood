@@ -171,8 +171,12 @@ listMerchants: async function() {
                 this.currentMerchant = configuredMerchant;
             } else {
                 this.currentMerchant = merchants[0];
-                // Atualiza as credenciais com o ID da primeira loja
-                AUTH.saveCredentials({
+                // Atualiza as credenciais diretamente em vez de usar saveCredentials
+                AUTH.credentials.merchantId = merchants[0].id;
+                AUTH.credentials.merchantUuid = merchants[0].uuid;
+                
+                // Adiciona um log para confirmar a atualização
+                console.log('Credenciais atualizadas para', {
                     merchantId: merchants[0].id,
                     merchantUuid: merchants[0].uuid
                 });
