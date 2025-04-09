@@ -123,7 +123,7 @@ generateUserCode: async function() {
             console.log('Resposta da API:', data);
 
             // Verificação dos campos obrigatórios
-            if (!data.userCode || !data.verifier) {
+            if (!data.userCode || !data.authorizationCodeVerifier) {
                 console.error('Dados incompletos recebidos da API:', data);
                 throw new Error('Resposta incompleta da API');
             }
@@ -136,7 +136,7 @@ generateUserCode: async function() {
                     `https://portal.ifood.com.br/apps/code?c=${data.userCode}`,
                 expiresIn: data.expiresIn || 600,
                 interval: data.interval || 5,
-                verifier: data.verifier // Campo obrigatório
+                verifier: data.authorizationCodeVerifier // Usando o nome correto do campo
             };
 
             console.log('UserCodeInfo salvo:', this.userCodeInfo);
