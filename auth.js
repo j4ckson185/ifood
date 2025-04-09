@@ -93,7 +93,7 @@ init: function() {
     },
 
     // Gera o código de usuário para autenticação
-    generateUserCode: async function() {
+generateUserCode: async function() {
         try {
             showLoading(true);
 
@@ -134,9 +134,6 @@ init: function() {
             // Atualiza a UI
             this.updateUserCodeUI();
 
-            // Inicia a verificação periódica
-            this.startAuthCheck();
-
             showToast('success', 'Código de autenticação gerado com sucesso!');
         } catch (error) {
             console.error('Erro ao gerar código de usuário:', error);
@@ -175,33 +172,46 @@ init: function() {
     },
 
     // Obtém o token de acesso usando o código de autorização
-    getTokenWithAuthCode: async function(authorizationCode) {
+getTokenWithAuthCode: async function(authorizationCode) {
         try {
-            const response = await fetch(this.baseUrl + '/authentication/v1.0/oauth/token', {
+            const formData = new URLSearchParams();
+            formData.append('grant_type', 'authorization_code');
+            formData.append('code', authorizationCode);
+            formData.append('client_id', this.credentials.client_id);
+            formData.append('client_secret', this.credentials.client_secret);
+            formData.append('verifier', this.userCodeInfo.verifier);
+
+            const response = await fetch(this.baseUrl + '/oauth/token', {
                 method: 'POST',
                 headers: {
-                    'Content-Type': 'application/json'
+                    'Content-Type': 'application/x-www-form-urlencoded'
                 },
-                body: JSON.stringify({
-                    grant_type: 'authorization_code',
-                    code: authorizationCode,
-                    client_id: this.credentials.client_id,
-                    client_secret: this.credentials.client_secret,
-                    verifier: this.userCodeInfo.verifier
-                })
+                body: formData.toString()
             });
 
             if (!response.ok) {
-                throw new Error('Falha ao obter token de acesso');
+                const errorText = await response.text();
+                console.error('Erro ao obter token:', errorText);
+                throw new Error('Falha ao obter token de acesso: ' + errorText);
             }
 
             const tokenData = await response.json();
-            this.saveToken(tokenData);
+            console.log('Token obtido:', tokenData);
+            
+            if (!tokenData.access_token) {
+                throw new Error('Token inválido recebido da API');
+            }
 
-            showToast('success', 'Autenticação concluída com sucesso!');
+            this.saveToken(tokenData);
+            showToast('success', 'Token de acesso obtido com sucesso!');
+            
+            // Limpa os dados do userCode pois não são mais necessários
+            this.userCodeInfo = {};
+            localStorage.removeItem('ifood_user_code');
+
         } catch (error) {
             console.error('Erro ao obter token de acesso:', error);
-            showToast('error', 'Erro ao obter token de acesso');
+            throw error;
         }
     },
     
@@ -387,7 +397,7 @@ init: function() {
             throw error;
         }
     },
-        submitAuthorizationCode: async function() {
+submitAuthorizationCode: async function() {
         try {
             const authCodeInput = document.getElementById('authorization-code');
             const authorizationCode = authCodeInput?.value?.trim();
@@ -398,6 +408,7 @@ init: function() {
             }
 
             if (!this.userCodeInfo.verifier) {
+                console.log('UserCodeInfo atual:', this.userCodeInfo);
                 showToast('error', 'Informações de autenticação incompletas. Gere um novo código.');
                 return;
             }
