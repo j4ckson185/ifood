@@ -73,62 +73,62 @@ window.REVIEWS = {
         }
     },
     
-    /**
-     * Busca as avaliações do merchant (Critério: Listar avaliações)
-     */
-    fetchReviews: function() {
-        var self = this;
-        return new Promise(function(resolve, reject) {
-            try {
-                showLoading(true);
-                
-                var merchantId = window.AUTH.credentials.merchantId;
-                if (!merchantId) {
-                    throw new Error('ID do merchant não configurado');
-                }
-                
-                // Faz a requisição para obter as avaliações
-                window.AUTH.apiRequest('/merchants/' + merchantId + '/reviews')
-                    .then(function(reviews) {
-                        console.log('Reviews:', reviews);
-                        
-                        // Se não receber avaliações ou ocorrer erro, usa simuladas
-                        if (!reviews || !Array.isArray(reviews)) {
-                            self.simulateReviews();
-                        } else {
-                            self.reviews = reviews;
-                            self.saveReviewsData();
-                        }
-                        
-                        self.updateReviewsUI();
-                        
-                        showToast('success', 'Avaliações atualizadas com sucesso!');
-                        resolve(reviews);
-                    })
-                    .catch(function(error) {
-                        console.error('Erro ao buscar avaliações:', error);
-                        showToast('error', 'Erro ao buscar avaliações');
-                        
-                        // Em caso de erro, usa avaliações simuladas
-                        self.simulateReviews();
-                        self.updateReviewsUI();
-                        resolve(self.reviews);
-                    })
-                    .finally(function() {
-                        showLoading(false);
-                    });
-            } catch (error) {
-                console.error('Erro ao buscar avaliações:', error);
-                showToast('error', error.message || 'Erro ao buscar avaliações');
-                
-                // Em caso de erro, usa avaliações simuladas
-                self.simulateReviews();
-                self.updateReviewsUI();
-                showLoading(false);
-                resolve(self.reviews);
+/**
+ * Busca as avaliações do merchant (Critério: Listar avaliações)
+ */
+fetchReviews: function() {
+    var self = this;
+    return new Promise(function(resolve, reject) {
+        try {
+            showLoading(true);
+            
+            var merchantId = window.AUTH.credentials.merchantId;
+            if (!merchantId) {
+                throw new Error('ID do merchant não configurado');
             }
-        });
-    },
+            
+            // Faz a requisição para obter as avaliações (usando a nova rota)
+            window.AUTH.apiRequest('/merchant/v1.0/merchants/' + merchantId + '/reviews')
+                .then(function(reviews) {
+                    console.log('Reviews:', reviews);
+                    
+                    // Se não receber avaliações ou ocorrer erro, usa simuladas
+                    if (!reviews || !Array.isArray(reviews)) {
+                        self.simulateReviews();
+                    } else {
+                        self.reviews = reviews;
+                        self.saveReviewsData();
+                    }
+                    
+                    self.updateReviewsUI();
+                    
+                    showToast('success', 'Avaliações atualizadas com sucesso!');
+                    resolve(reviews);
+                })
+                .catch(function(error) {
+                    console.error('Erro ao buscar avaliações:', error);
+                    showToast('error', 'Erro ao buscar avaliações');
+                    
+                    // Em caso de erro, usa avaliações simuladas
+                    self.simulateReviews();
+                    self.updateReviewsUI();
+                    resolve(self.reviews);
+                })
+                .finally(function() {
+                    showLoading(false);
+                });
+        } catch (error) {
+            console.error('Erro ao buscar avaliações:', error);
+            showToast('error', error.message || 'Erro ao buscar avaliações');
+            
+            // Em caso de erro, usa avaliações simuladas
+            self.simulateReviews();
+            self.updateReviewsUI();
+            showLoading(false);
+            resolve(self.reviews);
+        }
+    });
+},
     
     /**
      * Busca detalhes de uma avaliação específica (Critério: Obter detalhes das avaliações)
