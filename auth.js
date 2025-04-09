@@ -195,11 +195,11 @@ getTokenWithAuthCode: async function(authorizationCode) {
         const formData = new URLSearchParams();
         
         // Adiciona parâmetros usando camelCase como no Postman
-        formData.append('grantType', 'authorization_code');  // camelCase como no Postman
-        formData.append('clientId', this.credentials.client_id);  // camelCase
-        formData.append('clientSecret', this.credentials.client_secret);  // camelCase
-        formData.append('authorizationCode', authorizationCode);  // nome completo como no Postman
-        formData.append('authorizationCodeVerifier', this.userCodeInfo.verifier);  // nome completo
+        formData.append('grantType', 'authorization_code');
+        formData.append('clientId', this.credentials.client_id);
+        formData.append('clientSecret', this.credentials.client_secret);
+        formData.append('authorizationCode', authorizationCode);
+        formData.append('authorizationCodeVerifier', this.userCodeInfo.verifier);
 
         console.log('🔑 Parâmetros da requisição:', Object.fromEntries(formData));
 
@@ -208,7 +208,6 @@ getTokenWithAuthCode: async function(authorizationCode) {
             headers: {
                 'Content-Type': 'application/x-www-form-urlencoded',
                 'Accept': 'application/json',
-                // Adiciona headers de depuração
                 'X-Debug-Request': 'true'
             },
             body: formData.toString()
@@ -240,8 +239,8 @@ getTokenWithAuthCode: async function(authorizationCode) {
             throw new Error(`Erro ao obter token: ${data?.error?.message || 'Erro desconhecido'}`);
         }
 
-        // Verificação final do token
-        if (!data.access_token) {
+        // Verificação final do token - verifica tanto accessToken (camelCase) quanto access_token (snake_case)
+        if (!data.accessToken && !data.access_token) {
             throw new Error('Nenhum token de acesso recebido');
         }
 
@@ -262,6 +261,28 @@ getTokenWithAuthCode: async function(authorizationCode) {
         showToast('error', `Falha na autenticação: ${error.message}`);
         throw error;
     }
+},
+
+// Salva o token recebido
+saveToken: function(tokenData) {
+    const currentTime = Date.now();
+    const expiresIn = tokenData.expiresIn || tokenData.expires_in 
+        ? parseInt(tokenData.expiresIn || tokenData.expires_in) * 1000  // converte para milissegundos
+        : 3600000;  // 1 hora como padrão
+
+    this.token = {
+        access_token: tokenData.accessToken || tokenData.access_token || '',
+        refresh_token: tokenData.refreshToken || tokenData.refresh_token || this.token.refresh_token || '',
+        expires_at: currentTime + expiresIn,
+        token_type: tokenData.type || tokenData.token_type || 'bearer'
+    };
+    
+    console.log(`Token salvo. 
+        Expira em: ${new Date(this.token.expires_at).toLocaleString()}
+        Tempo restante: ${((this.token.expires_at - currentTime) / 60000).toFixed(2)} minutos`
+    );
+    
+    localStorage.setItem('ifood_token', JSON.stringify(this.token));
 },
 
 // Para a verificação de status
@@ -465,28 +486,6 @@ clearUserCode: function() {
             console.error('Erro no refresh token:', error);
             throw error;
         }
-    },
-
-    // Salva o token recebido
-    saveToken: function(tokenData) {
-        const currentTime = Date.now();
-        const expiresIn = tokenData.expires_in 
-            ? parseInt(tokenData.expires_in) * 1000  // converte para milissegundos
-            : 3600000;  // 1 hora como padrão
-
-        this.token = {
-            access_token: tokenData.access_token || '',
-            refresh_token: tokenData.refresh_token || this.token.refresh_token || '',
-            expires_at: currentTime + expiresIn,
-            token_type: tokenData.token_type || 'bearer'
-        };
-        
-        console.log(`Token salvo. 
-            Expira em: ${new Date(this.token.expires_at).toLocaleString()}
-            Tempo restante: ${((this.token.expires_at - currentTime) / 60000).toFixed(2)} minutos`
-        );
-        
-        localStorage.setItem('ifood_token', JSON.stringify(this.token));
     },
 
     // Obtém headers de autenticação
