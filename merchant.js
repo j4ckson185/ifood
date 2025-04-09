@@ -148,13 +148,14 @@ window.MERCHANT = {
     
 /**
  * Lista todas as lojas do merchant (Critério: Listar Lojas)
- * GET /merchants
+ * GET /merchant/v1.0/merchants
  */
 listMerchants: async function() {
     try {
         console.log('Tentando listar merchants com o token:', AUTH.token.access_token ? 'Token disponível' : 'Token não disponível');
         
-        const merchants = await AUTH.apiRequest('/merchants');
+        // Usando a nova rota sugerida
+        const merchants = await AUTH.apiRequest('/merchant/v1.0/merchants');
         console.log('Merchants:', merchants);
         
         // Se houver lojas, usa a primeira ou a que corresponde ao ID configurado
@@ -186,7 +187,7 @@ listMerchants: async function() {
         console.error('Erro ao listar merchants:', error);
         throw error;
     }
-}, 
+},
     
     /**
      * Obtém detalhes de um merchant específico (Critério: Listar detalhes da loja)
