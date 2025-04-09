@@ -203,14 +203,15 @@ function setupUIEvents() {
     }
 }
 
-/**
- * Carrega dados iniciais da aplicação
- */
 function loadInitialData() {
-    // Carrega dados do merchant
-    MERCHANT.loadAllMerchantData().catch(function(err) {
-        console.error('Erro ao carregar dados do merchant:', err);
-    });
+    // Verifica se loadAllMerchantData existe antes de chamar
+    if (typeof MERCHANT.loadAllMerchantData === 'function') {
+        MERCHANT.loadAllMerchantData().catch(function(err) {
+            console.error('Erro ao carregar dados do merchant:', err);
+        });
+    } else {
+        console.error('loadAllMerchantData não é uma função. Método não encontrado no objeto MERCHANT.');
+    }
     
     // Carrega pedidos
     ORDERS.fetchOrders().catch(function(err) {
