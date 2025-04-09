@@ -197,14 +197,15 @@ listMerchants: async function() {
      * Obtém detalhes de um merchant específico (Critério: Listar detalhes da loja)
      * GET /merchants/{merchantId}
      */
-    async getMerchantDetails() {
+async getMerchantDetails() {
         try {
             const merchantId = AUTH.credentials.merchantId;
             if (!merchantId) {
                 throw new Error('ID do merchant não configurado');
             }
             
-            const merchantDetails = await AUTH.apiRequest(`/merchants/${merchantId}`);
+            // Use the merchant ID (which is a string) instead of the UUID
+            const merchantDetails = await AUTH.apiRequest(`/merchant/v1.0/merchants/${merchantId}`);
             console.log('Merchant Details:', merchantDetails);
             
             // Atualiza os dados do merchant atual
