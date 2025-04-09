@@ -172,6 +172,66 @@ generateUserCode: async function() {
     }
 },
 
+// Obtém o token de acesso usando o código de autorização
+getTokenWithAuthCode: async function(authorizationCode) {
+    try {
+        console.log('Iniciando obtenção do token com código:', authorizationCode);
+        console.log('UserCodeInfo atual:', this.userCodeInfo);
+
+        const data = {
+            grant_type: 'authorization_code',
+            client_id: this.credentials.client_id,
+            client_secret: this.credentials.client_secret,
+            code: authorizationCode,
+            code_verifier: this.userCodeInfo.verifier
+        };
+
+        console.log('Dados a serem enviados:', data);
+
+        const formData = new URLSearchParams();
+        for (const [key, value] of Object.entries(data)) {
+            if (value) formData.append(key, value);
+        }
+
+        console.log('FormData preparado:', formData.toString());
+
+        const response = await fetch(this.baseUrl + '/oauth/token', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+                'Accept': 'application/json'
+            },
+            body: formData.toString()
+        });
+
+        const responseText = await response.text();
+        console.log('Resposta bruta:', responseText);
+
+        if (!response.ok) {
+            console.error('Erro na resposta:', response.status, responseText);
+            throw new Error('Falha ao obter token de acesso: ' + responseText);
+        }
+
+        const tokenData = JSON.parse(responseText);
+        console.log('Token obtido:', tokenData);
+        
+        if (!tokenData.access_token) {
+            throw new Error('Token inválido recebido da API');
+        }
+
+        this.saveToken(tokenData);
+        showToast('success', 'Token de acesso obtido com sucesso!');
+        
+        // Limpa os dados do userCode pois não são mais necessários
+        this.userCodeInfo = {};
+        localStorage.removeItem('ifood_user_code');
+
+    } catch (error) {
+        console.error('Erro ao obter token de acesso:', error);
+        throw error;
+    }
+},
+
 // Para a verificação de status
 stopAuthCheck: function() {
     if (this._authCheckInterval) {
