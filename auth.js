@@ -92,85 +92,194 @@ window.AUTH = {
         document.getElementById('submit-auth-code')?.addEventListener('click', () => this.submitAuthorizationCode());
     },
 
-    // Atualiza os campos do formulário de configurações
-    updateSettingsForm: function() {
-        var clientIdInput = document.getElementById('client-id');
-        var clientSecretInput = document.getElementById('client-secret');
-        var merchantIdInput = document.getElementById('merchant-id-input');
-        var merchantUuidInput = document.getElementById('merchant-uuid-input');
-        
-        if (clientIdInput) clientIdInput.value = this.credentials.client_id;
-        if (clientSecretInput) clientSecretInput.value = this.credentials.client_secret;
-        if (merchantIdInput) merchantIdInput.value = this.credentials.merchantId;
-        if (merchantUuidInput) merchantUuidInput.value = this.credentials.merchantUuid;
-    },
+// Preencher campos do formulário de configurações
+updateSettingsForm: function() {
+    var clientIdInput = document.getElementById('client-id');
+    var clientSecretInput = document.getElementById('client-secret');
+    var merchantIdInput = document.getElementById('merchant-id-input');
+    var merchantUuidInput = document.getElementById('merchant-uuid-input');
+    
+    if (clientIdInput) clientIdInput.value = this.credentials.client_id;
+    if (clientSecretInput) clientSecretInput.value = this.credentials.client_secret;
+    if (merchantIdInput) merchantIdInput.value = this.credentials.merchantId;
+    if (merchantUuidInput) merchantUuidInput.value = this.credentials.merchantUuid;
+},
 
     // Gera o código de usuário para autenticação
-    generateUserCode: async function() {
-        try {
-            showLoading(true);
+generateUserCode: async function() {
+    try {
+        showLoading(true);
 
-            console.log('Iniciando geração de código de usuário...');
+        console.log('Iniciando geração de código de usuário...');
 
-            const formData = new URLSearchParams();
-            formData.append('clientId', this.credentials.client_id);
-            formData.append('grantType', 'authorization_code');
+        const formData = new URLSearchParams();
+        formData.append('clientId', this.credentials.client_id);
+        formData.append('grantType', 'authorization_code');
 
-            console.log('Enviando requisição para gerar código...');
-            const response = await fetch(this.baseUrl + '/oauth/userCode', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/x-www-form-urlencoded',
-                    'Accept': 'application/json'
-                },
-                body: formData.toString()
-            });
+        console.log('Enviando requisição para gerar código...');
+        const response = await fetch(this.baseUrl + '/oauth/userCode', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+                'Accept': 'application/json'
+            },
+            body: formData.toString()
+        });
 
-            if (!response.ok) {
-                const errorText = await response.text();
-                console.error('Resposta de erro:', errorText);
-                throw new Error('Falha ao gerar código de usuário: ' + errorText);
-            }
-
-            const data = await response.json();
-            console.log('Resposta da API:', data);
-
-            // Verificação dos campos obrigatórios
-            if (!data.userCode || !data.authorizationCodeVerifier) {
-                console.error('Dados incompletos recebidos da API:', data);
-                throw new Error('Resposta incompleta da API');
-            }
-            
-            // Salva as informações do código
-            this.userCodeInfo = {
-                userCode: data.userCode,
-                verificationUrl: data.verificationUrl || 'https://portal.ifood.com.br/apps/code',
-                verificationUrlComplete: data.verificationUrlComplete || 
-                    `https://portal.ifood.com.br/apps/code?c=${data.userCode}`,
-                expiresIn: data.expiresIn || 600,
-                interval: data.interval || 5,
-                verifier: data.authorizationCodeVerifier
-            };
-
-            // Salva o momento da geração para contagem regressiva
-            localStorage.setItem('user_code_generated_at', new Date().toISOString());
-
-            console.log('UserCodeInfo salvo:', this.userCodeInfo);
-
-            // Salva no localStorage
-            localStorage.setItem('ifood_user_code', JSON.stringify(this.userCodeInfo));
-
-            // Atualiza a UI
-            this.updateUserCodeUI();
-
-            showToast('success', 'Código de autenticação gerado com sucesso!');
-        } catch (error) {
-            console.error('Erro ao gerar código de usuário:', error);
-            showToast('error', 'Erro ao gerar código de autenticação: ' + error.message);
-        } finally {
-            showLoading(false);
+        if (!response.ok) {
+            const errorText = await response.text();
+            console.error('Resposta de erro:', errorText);
+            throw new Error('Falha ao gerar código de usuário: ' + errorText);
         }
-    },
+
+        const data = await response.json();
+        console.log('Resposta da API:', data);
+
+        // Verificação dos campos obrigatórios
+        if (!data.userCode || !data.authorizationCodeVerifier) {
+            console.error('Dados incompletos recebidos da API:', data);
+            throw new Error('Resposta incompleta da API');
+        }
+        
+        // Salva as informações do código
+        this.userCodeInfo = {
+            userCode: data.userCode,
+            verificationUrl: data.verificationUrl || 'https://portal.ifood.com.br/apps/code',
+            verificationUrlComplete: data.verificationUrlComplete || 
+                `https://portal.ifood.com.br/apps/code?c=${data.userCode}`,
+            expiresIn: data.expiresIn || 600,
+            interval: data.interval || 5,
+            verifier: data.authorizationCodeVerifier
+        };
+
+        // Salva o momento da geração para contagem regressiva
+        localStorage.setItem('user_code_generated_at', new Date().toISOString());
+
+        console.log('UserCodeInfo salvo:', this.userCodeInfo);
+
+        // Salva no localStorage
+        localStorage.setItem('ifood_user_code', JSON.stringify(this.userCodeInfo));
+
+        // Atualiza a UI
+        this.updateUserCodeUI();
+
+        showToast('success', 'Código de autenticação gerado com sucesso!');
+    } catch (error) {
+        console.error('Erro ao gerar código de usuário:', error);
+        showToast('error', 'Erro ao gerar código de autenticação: ' + error.message);
+    } finally {
+        showLoading(false);
+    }
+},
+
+// Atualiza a UI com as informações do código de usuário
+updateUserCodeUI: function() {
+    const authStatus = document.getElementById('auth-status');
+    const userCodeDisplay = document.getElementById('user-code-display');
+    const verificationUrl = document.getElementById('verification-url');
+    const expiresIn = document.getElementById('expires-in');
+
+    if (authStatus && this.userCodeInfo.userCode) {
+        // Exibe a seção de status de autenticação
+        authStatus.style.display = 'block';
+
+        // Atualiza o código de usuário
+        if (userCodeDisplay) {
+            userCodeDisplay.textContent = this.userCodeInfo.userCode;
+        }
+
+        // Atualiza o link de verificação
+        if (verificationUrl) {
+            verificationUrl.href = this.userCodeInfo.verificationUrlComplete;
+            verificationUrl.textContent = this.userCodeInfo.verificationUrl;
+        }
+
+        // Calcula o tempo restante de expiração
+        if (expiresIn) {
+            const expirationTime = new Date(Date.now() + (this.userCodeInfo.expiresIn * 1000));
+            expiresIn.textContent = `Expira em: ${expirationTime.toLocaleTimeString()}`;
+        }
+
+        // Inicia o countdown para expiração
+        this.startUserCodeCountdown();
+    }
+},
+
+// Inicia uma contagem regressiva para o código de usuário
+startUserCodeCountdown: function() {
+    // Para qualquer countdown anterior
+    this.stopUserCodeCountdown();
+
+    const expiresIn = document.getElementById('expires-in');
+    if (!expiresIn) return;
+
+    // Salva o intervalo para poder parar depois
+    this._userCodeCountdown = setInterval(() => {
+        const remainingSeconds = Math.max(0, Math.floor((this.userCodeInfo.expiresIn * 1000 - (Date.now() - Date.parse(localStorage.getItem('user_code_generated_at')))) / 1000));
+
+        if (remainingSeconds > 0) {
+            const minutes = Math.floor(remainingSeconds / 60);
+            const seconds = remainingSeconds % 60;
+            expiresIn.textContent = `Expira em: ${minutes}m ${seconds}s`;
+        } else {
+            // Código expirado
+            this.stopUserCodeCountdown();
+            expiresIn.textContent = 'Código Expirado';
+            
+            // Oculta a seção de status
+            const authStatus = document.getElementById('auth-status');
+            if (authStatus) {
+                authStatus.style.display = 'none';
+            }
+
+            // Limpa as informações de código de usuário
+            this.userCodeInfo = {
+                userCode: '',
+                verificationUrl: '',
+                verificationUrlComplete: '',
+                expiresIn: 0,
+                interval: 0,
+                verifier: ''
+            };
+            localStorage.removeItem('ifood_user_code');
+            localStorage.removeItem('user_code_generated_at');
+        }
+    }, 1000);
+},
+
+// Para o countdown do código de usuário
+stopUserCodeCountdown: function() {
+    if (this._userCodeCountdown) {
+        clearInterval(this._userCodeCountdown);
+        this._userCodeCountdown = null;
+    }
+},
+
+// Método para limpar o código de usuário
+clearUserCode: function() {
+    // Para o countdown
+    this.stopUserCodeCountdown();
+
+    // Reseta as informações do código de usuário
+    this.userCodeInfo = {
+        userCode: '',
+        verificationUrl: '',
+        verificationUrlComplete: '',
+        expiresIn: 0,
+        interval: 0,
+        verifier: ''
+    };
+
+    // Remove do localStorage
+    localStorage.removeItem('ifood_user_code');
+    localStorage.removeItem('user_code_generated_at');
+
+    // Esconde a seção de status de autenticação
+    const authStatus = document.getElementById('auth-status');
+    if (authStatus) {
+        authStatus.style.display = 'none';
+    }
+},
 
     // Método para obter o token de acesso
     getAccessToken: async function() {
