@@ -351,11 +351,13 @@ async getOpeningHours() {
             const openingHours = await AUTH.apiRequest(`/merchant/v1.0/merchants/${merchantId}/opening-hours`);
             console.log('Opening Hours:', openingHours);
             
-            this.openingHours = openingHours;
+            // Verifica se o retorno é um array válido
+            this.openingHours = Array.isArray(openingHours) ? openingHours : [];
+            
             this.updateOpeningHoursUI();
             this.saveData();
             
-            return openingHours;
+            return this.openingHours;
         } catch (firstError) {
             console.warn('Erro no primeiro endpoint de horários:', firstError);
             
@@ -364,18 +366,30 @@ async getOpeningHours() {
                 const alternativeOpeningHours = await AUTH.apiRequest(`/merchants/${merchantId}/opening-hours`);
                 console.log('Opening Hours (endpoint alternativo):', alternativeOpeningHours);
                 
-                this.openingHours = alternativeOpeningHours;
+                // Verifica se o retorno é um array válido
+                this.openingHours = Array.isArray(alternativeOpeningHours) ? alternativeOpeningHours : [];
+                
                 this.updateOpeningHoursUI();
                 this.saveData();
                 
-                return alternativeOpeningHours;
+                return this.openingHours;
             } catch (secondError) {
                 console.error('Erro em ambos os endpoints de horários:', secondError);
+                
+                // Define como array vazio para evitar erros
+                this.openingHours = [];
+                this.updateOpeningHoursUI();
+                
                 throw secondError;
             }
         }
     } catch (error) {
         console.error('Erro ao obter horários de funcionamento:', error);
+        
+        // Define como array vazio para evitar erros
+        this.openingHours = [];
+        this.updateOpeningHoursUI();
+        
         throw error;
     }
 },
@@ -798,65 +812,62 @@ updateMerchantUI() {
         });
     },
     
-    /**
-     * Atualiza a UI com os horários de funcionamento
-     */
-    updateOpeningHoursUI() {
-        const openingHoursList = document.getElementById('opening-hours-list');
-        if (!openingHoursList) return;
-        
-        // Limpa a lista atual
-        openingHoursList.innerHTML = '';
-        
-        // Se não houver horários, mostra mensagem
-        if (!this.openingHours || this.openingHours.length === 0) {
-            openingHoursList.innerHTML = '<p class="no-data">Nenhum horário de funcionamento definido.</p>';
-            return;
-        }
-        
-        // Mapeia os dias da semana para português
-        const weekdayMap = {
-            'MONDAY': 'Segunda-feira',
-            'TUESDAY': 'Terça-feira',
-            'WEDNESDAY': 'Quarta-feira',
-            'THURSDAY': 'Quinta-feira',
-            'FRIDAY': 'Sexta-feira',
-            'SATURDAY': 'Sábado',
-            'SUNDAY': 'Domingo'
-        };
-        
-        // Ordena os dias da semana
-        const weekdayOrder = {
-            'MONDAY': 1,
-            'TUESDAY': 2,
-            'WEDNESDAY': 3,
-            'THURSDAY': 4,
-            'FRIDAY': 5,
-            'SATURDAY': 6,
-            'SUNDAY': 7
-        };
-        
-        const sortedHours = [...this.openingHours].sort((a, b) => {
-            return weekdayOrder[a.weekday] - weekdayOrder[b.weekday];
-        });
-        
-        // Para cada dia, cria um item na lista
-        sortedHours.forEach(day => {
-            const dayName = weekdayMap[day.weekday] || day.weekday;
-            
-            // Formata os horários
-            const opens = day.workingDay.opens;
-            const closes = day.workingDay.closes;
-            
-            // Cria o elemento HTML
-            const dayElem = document.createElement('div');
-            dayElem.className = 'opening-hours-item';
-            dayElem.innerHTML = `
-                <div class="weekday">${dayName}</div>
-                <div class="hours">${opens} - ${closes}</div>
-            `;
-            
-            openingHoursList.appendChild(dayElem);
-        });
+updateOpeningHoursUI() {
+    const openingHoursList = document.getElementById('opening-hours-list');
+    if (!openingHoursList) return;
+    
+    // Limpa a lista atual
+    openingHoursList.innerHTML = '';
+    
+    // Verifica se openingHours existe e é um array
+    if (!this.openingHours || !Array.isArray(this.openingHours) || this.openingHours.length === 0) {
+        openingHoursList.innerHTML = '<p class="no-data">Nenhum horário de funcionamento definido.</p>';
+        return;
     }
-};
+    
+    // Mapeia os dias da semana para português
+    const weekdayMap = {
+        'MONDAY': 'Segunda-feira',
+        'TUESDAY': 'Terça-feira',
+        'WEDNESDAY': 'Quarta-feira',
+        'THURSDAY': 'Quinta-feira',
+        'FRIDAY': 'Sexta-feira',
+        'SATURDAY': 'Sábado',
+        'SUNDAY': 'Domingo'
+    };
+    
+    // Ordena os dias da semana
+    const weekdayOrder = {
+        'MONDAY': 1,
+        'TUESDAY': 2,
+        'WEDNESDAY': 3,
+        'THURSDAY': 4,
+        'FRIDAY': 5,
+        'SATURDAY': 6,
+        'SUNDAY': 7
+    };
+    
+    const sortedHours = [...this.openingHours].sort((a, b) => {
+        return weekdayOrder[a.weekday] - weekdayOrder[b.weekday];
+    });
+    
+    // Para cada dia, cria um item na lista
+    sortedHours.forEach(day => {
+        const dayName = weekdayMap[day.weekday] || day.weekday;
+        
+        // Verifica se workingDay existe
+        const opens = day.workingDay ? day.workingDay.opens : 'N/A';
+        const closes = day.workingDay ? day.workingDay.closes : 'N/A';
+        
+        // Cria o elemento HTML
+        const dayElem = document.createElement('div');
+        dayElem.className = 'opening-hours-item';
+        dayElem.innerHTML = `
+            <div class="weekday">${dayName}</div>
+            <div class="hours">${opens} - ${closes}</div>
+        `;
+        
+        openingHoursList.appendChild(dayElem);
+    });
+}
+});
