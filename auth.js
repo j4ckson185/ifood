@@ -105,6 +105,28 @@ updateSettingsForm: function() {
     if (merchantUuidInput) merchantUuidInput.value = this.credentials.merchantUuid;
 },
 
+    // Adicionar este método ao objeto AUTH
+saveCredentials: function(newCredentials) {
+    // Mescla as novas credenciais com as existentes
+    this.credentials = {
+        ...this.credentials,
+        ...newCredentials
+    };
+    
+    // Salva no localStorage
+    localStorage.setItem('ifood_credentials', JSON.stringify(this.credentials));
+    
+    console.log('Credenciais salvas:', this.credentials);
+    
+    // Atualiza o display do merchant ID
+    if (document.getElementById('merchant-id-display')) {
+        document.getElementById('merchant-id-display').textContent = this.credentials.merchantId;
+    }
+    
+    // Atualiza os campos do formulário de configurações
+    this.updateSettingsForm();
+},
+
     // Gera o código de usuário para autenticação
 generateUserCode: async function() {
     try {
