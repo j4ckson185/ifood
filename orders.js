@@ -254,7 +254,7 @@ window.ORDERS = {
     /**
      * Faz uma chamada de polling para verificar novos eventos (Critério: Receber eventos via polling)
      */
-// Dentro do módulo ORDERS, módulo pollForEvents corrigido
+// Dentro do módulo ORDERS, módulo pollForEvents corrigido com a rota correta
 pollForEvents: async function() {
     try {
         if (!this.pollingEnabled) return;
@@ -285,10 +285,10 @@ pollForEvents: async function() {
         }
         
         // Faz a requisição de polling com o header x-polling-merchants
-        // Corrigindo a rota para /events/polling
+        // Corrigindo a rota para /events:polling (com dois pontos)
         let events;
         try {
-            events = await window.AUTH.apiRequest('/events/polling', {
+            events = await window.AUTH.apiRequest('/events:polling', {
                 headers: {
                     'x-polling-merchants': merchantId
                 }
