@@ -263,7 +263,7 @@ getTokenWithAuthCode: async function(authorizationCode) {
         showToast('error', `Falha na autenticação: ${error.message}`);
         throw error;
     }
-}
+},
 
 // Para a verificação de status
 stopAuthCheck: function() {
