@@ -34,7 +34,7 @@ window.AUTH = {
     },
     
     // Inicializa o módulo de autenticação
-    init: function() {
+init: function() {
         console.log("Inicializando módulo AUTH");
         
         // Carrega as credenciais do localStorage
@@ -89,7 +89,7 @@ window.AUTH = {
 
         // Adiciona os event listeners para os botões de autenticação
         document.getElementById('generate-user-code')?.addEventListener('click', () => this.generateUserCode());
-        document.getElementById('check-auth-status')?.addEventListener('click', () => this.checkAuthStatus());
+        document.getElementById('submit-auth-code')?.addEventListener('click', () => this.submitAuthorizationCode());
     },
 
     // Gera o código de usuário para autenticação
@@ -162,109 +162,6 @@ window.AUTH = {
             // Calcula o tempo restante
             const expirationTime = new Date(Date.now() + (this.userCodeInfo.expiresIn * 1000));
             expiresIn.textContent = `Expira em: ${expirationTime.toLocaleTimeString()}`;
-        }
-    },
-
-    // Inicia a verificação periódica do status da autenticação
-    startAuthCheck: function() {
-        console.log('Iniciando verificação periódica...');
-        
-        // Limpa qualquer intervalo existente
-        if (this._authCheckInterval) {
-            clearInterval(this._authCheckInterval);
-            this._authCheckInterval = null;
-        }
-
-        // Define um intervalo mais conservador (15 segundos)
-        const checkInterval = 15000; // 15 segundos
-        console.log(`Configurando verificação a cada ${checkInterval/1000} segundos`);
-
-        // Faz a primeira verificação após 5 segundos
-        setTimeout(() => {
-            this.checkAuthStatus();
-            
-            // Inicia as verificações periódicas
-            this._authCheckInterval = setInterval(() => {
-                this.checkAuthStatus();
-            }, checkInterval);
-        }, 5000);
-
-        // Define um timeout para parar as verificações após 10 minutos
-        setTimeout(() => {
-            if (this._authCheckInterval) {
-                console.log('Tempo máximo atingido, parando verificação');
-                clearInterval(this._authCheckInterval);
-                this._authCheckInterval = null;
-                showToast('warning', 'Tempo de verificação expirou. Gere um novo código se necessário.');
-            }
-        }, 600000); // 10 minutos
-    },
-
-    // Verifica o status da autenticação
-    checkAuthStatus: async function() {
-        // Previne múltiplas verificações simultâneas
-        if (this._checking) {
-            console.log('Verificação já em andamento, pulando...');
-            return;
-        }
-
-        try {
-            this._checking = true;
-
-            if (!this.userCodeInfo.userCode) {
-                console.log('Nenhum código de autenticação ativo');
-                this.stopAuthCheck();
-                return;
-            }
-
-            console.log('Verificando status do código de autenticação...');
-
-            const response = await fetch(this.baseUrl + '/oauth/userCode/status', {
-                method: 'GET',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'user-code': this.userCodeInfo.userCode
-                }
-            });
-
-            if (!response.ok) {
-                if (response.status === 404) {
-                    console.log('Código não encontrado ou expirado');
-                    this.stopAuthCheck();
-                    return;
-                }
-                throw new Error(`Erro ${response.status}`);
-            }
-
-            const data = await response.json();
-            console.log('Status:', data.status);
-
-            switch(data.status) {
-                case 'AUTHORIZATION_PENDING':
-                    // Não mostra toast para não sobrecarregar a interface
-                    break;
-
-                case 'AUTHORIZATION_GRANTED':
-                    console.log('Autorização concedida!');
-                    this.stopAuthCheck();
-                    await this.getTokenWithAuthCode(data.authorizationCode);
-                    break;
-
-                case 'EXPIRED':
-                    console.log('Código expirado');
-                    this.stopAuthCheck();
-                    showToast('warning', 'Código expirado. Gere um novo se necessário.');
-                    break;
-
-                default:
-                    console.log('Status desconhecido:', data.status);
-                    break;
-            }
-        } catch (error) {
-            console.error('Erro ao verificar status:', error);
-            // Não mostra toast para não sobrecarregar
-        } finally {
-            this._checking = false;
         }
     },
 
@@ -488,6 +385,45 @@ window.AUTH = {
         } catch (error) {
             console.error('Erro na requisição:', error);
             throw error;
+        }
+    },
+        submitAuthorizationCode: async function() {
+        try {
+            const authCodeInput = document.getElementById('authorization-code');
+            const authorizationCode = authCodeInput?.value?.trim();
+
+            if (!authorizationCode) {
+                showToast('error', 'Por favor, insira o código de autorização');
+                return;
+            }
+
+            if (!this.userCodeInfo.verifier) {
+                showToast('error', 'Informações de autenticação incompletas. Gere um novo código.');
+                return;
+            }
+
+            showLoading(true);
+
+            // Para qualquer verificação em andamento
+            this.stopAuthCheck();
+
+            await this.getTokenWithAuthCode(authorizationCode);
+            
+            // Limpa o campo de entrada
+            if (authCodeInput) {
+                authCodeInput.value = '';
+            }
+
+            showToast('success', 'Autenticação concluída com sucesso!');
+            
+            // Oculta a seção de autenticação
+            document.getElementById('auth-status').style.display = 'none';
+
+        } catch (error) {
+            console.error('Erro ao processar código de autorização:', error);
+            showToast('error', 'Erro ao processar código de autorização');
+        } finally {
+            showLoading(false);
         }
     }
 };
