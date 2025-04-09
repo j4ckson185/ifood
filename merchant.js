@@ -150,39 +150,43 @@ window.MERCHANT = {
  * Lista todas as lojas do merchant (Critério: Listar Lojas)
  * GET /merchants
  */
-listMerchants() {
+listMerchants: async function() {
     try {
         console.log('Tentando listar merchants com o token:', AUTH.token.access_token ? 'Token disponível' : 'Token não disponível');
         
-        const merchants = await AUTH.apiRequest('/merchants', {
-            headers: {
-                // Pode ser necessário adicionar cabeçalhos específicos aqui
-                'X-Debug': 'true' // Para depuração adicional
-            }
-        });
-        
+        const merchants = await AUTH.apiRequest('/merchants');
         console.log('Merchants:', merchants);
         
         // Se houver lojas, usa a primeira ou a que corresponde ao ID configurado
         if (merchants && merchants.length > 0) {
-            // Resto do código permanece igual
-            // ...
+            // Procura pela loja com o ID configurado
+            const configuredMerchant = merchants.find(m => 
+                m.id === AUTH.credentials.merchantId || 
+                m.uuid === AUTH.credentials.merchantUuid
+            );
+            
+            // Se encontrar, usa ela, senão usa a primeira
+            if (configuredMerchant) {
+                this.currentMerchant = configuredMerchant;
+            } else {
+                this.currentMerchant = merchants[0];
+                // Atualiza as credenciais com o ID da primeira loja
+                AUTH.saveCredentials({
+                    merchantId: merchants[0].id,
+                    merchantUuid: merchants[0].uuid
+                });
+            }
+            
+            this.updateMerchantUI();
+            this.saveData();
         }
         
         return merchants;
     } catch (error) {
         console.error('Erro ao listar merchants:', error);
-        // Exibe mais detalhes do erro para ajudar na depuração
-        if (error.response) {
-            console.error('Detalhes da resposta:', {
-                status: error.response.status,
-                headers: error.response.headers,
-                data: error.response.data
-            });
-        }
         throw error;
     }
-}
+}, 
     
     /**
      * Obtém detalhes de um merchant específico (Critério: Listar detalhes da loja)
