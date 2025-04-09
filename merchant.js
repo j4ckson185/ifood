@@ -870,4 +870,3 @@ updateOpeningHoursUI() {
         openingHoursList.appendChild(dayElem);
     });
 }
-});
