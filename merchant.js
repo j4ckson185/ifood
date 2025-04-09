@@ -150,7 +150,7 @@ window.MERCHANT = {
  * Lista todas as lojas do merchant (Critério: Listar Lojas)
  * GET /merchants
  */
-async listMerchants() {
+listMerchants() {
     try {
         console.log('Tentando listar merchants com o token:', AUTH.token.access_token ? 'Token disponível' : 'Token não disponível');
         
