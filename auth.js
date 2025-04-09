@@ -172,47 +172,52 @@ window.AUTH = {
         // Limpa qualquer intervalo existente
         if (this._authCheckInterval) {
             clearInterval(this._authCheckInterval);
+            this._authCheckInterval = null;
         }
 
-        // Faz a primeira verificação imediatamente
-        this.checkAuthStatus();
-
-        // Define o intervalo para verificações subsequentes
-        // Usa um intervalo mínimo de 5 segundos ou o intervalo sugerido pela API
-        const checkInterval = Math.max(5, this.userCodeInfo.interval || 5) * 1000;
+        // Define um intervalo mais conservador (15 segundos)
+        const checkInterval = 15000; // 15 segundos
         console.log(`Configurando verificação a cada ${checkInterval/1000} segundos`);
 
-        this._authCheckInterval = setInterval(() => {
+        // Faz a primeira verificação após 5 segundos
+        setTimeout(() => {
             this.checkAuthStatus();
-        }, checkInterval);
+            
+            // Inicia as verificações periódicas
+            this._authCheckInterval = setInterval(() => {
+                this.checkAuthStatus();
+            }, checkInterval);
+        }, 5000);
 
-        // Define um timeout para parar as verificações após o tempo de expiração
-        const expiresIn = (this.userCodeInfo.expiresIn || 600) * 1000; // 10 minutos padrão
-        console.log(`Verificação será interrompida em ${expiresIn/1000} segundos`);
-
+        // Define um timeout para parar as verificações após 10 minutos
         setTimeout(() => {
             if (this._authCheckInterval) {
-                console.log('Tempo expirado, parando verificação');
+                console.log('Tempo máximo atingido, parando verificação');
                 clearInterval(this._authCheckInterval);
                 this._authCheckInterval = null;
-                showToast('warning', 'Tempo de autenticação expirou. Gere um novo código se necessário.');
+                showToast('warning', 'Tempo de verificação expirou. Gere um novo código se necessário.');
             }
-        }, expiresIn);
+        }, 600000); // 10 minutos
     },
 
     // Verifica o status da autenticação
     checkAuthStatus: async function() {
+        // Previne múltiplas verificações simultâneas
+        if (this._checking) {
+            console.log('Verificação já em andamento, pulando...');
+            return;
+        }
+
         try {
+            this._checking = true;
+
             if (!this.userCodeInfo.userCode) {
                 console.log('Nenhum código de autenticação ativo');
-                if (this._authCheckInterval) {
-                    clearInterval(this._authCheckInterval);
-                    this._authCheckInterval = null;
-                }
+                this.stopAuthCheck();
                 return;
             }
 
-            console.log('Verificando status para o código:', this.userCodeInfo.userCode);
+            console.log('Verificando status do código de autenticação...');
 
             const response = await fetch(this.baseUrl + '/oauth/userCode/status', {
                 method: 'GET',
@@ -223,48 +228,52 @@ window.AUTH = {
             });
 
             if (!response.ok) {
-                const errorText = await response.text();
-                console.error('Erro na resposta do status:', errorText);
-                throw new Error('Falha ao verificar status: ' + errorText);
+                if (response.status === 404) {
+                    console.log('Código não encontrado ou expirado');
+                    this.stopAuthCheck();
+                    return;
+                }
+                throw new Error(`Erro ${response.status}`);
             }
 
             const data = await response.json();
-            console.log('Status recebido:', data);
+            console.log('Status:', data.status);
 
-            if (data.status === 'AUTHORIZATION_PENDING') {
-                console.log('Aguardando autorização do usuário...');
-                showToast('info', 'Aguardando autorização do usuário...');
-            } else if (data.status === 'AUTHORIZATION_GRANTED') {
-                console.log('Autorização concedida! Código:', data.authorizationCode);
-                // Limpa o intervalo de verificação
-                if (this._authCheckInterval) {
-                    clearInterval(this._authCheckInterval);
-                    this._authCheckInterval = null;
-                }
+            switch(data.status) {
+                case 'AUTHORIZATION_PENDING':
+                    // Não mostra toast para não sobrecarregar a interface
+                    break;
 
-                // Obtém o token de acesso
-                await this.getTokenWithAuthCode(data.authorizationCode);
-            } else if (data.status === 'EXPIRED') {
-                console.log('Código expirado');
-                showToast('error', 'Código expirado. Gere um novo código.');
-                if (this._authCheckInterval) {
-                    clearInterval(this._authCheckInterval);
-                    this._authCheckInterval = null;
-                }
+                case 'AUTHORIZATION_GRANTED':
+                    console.log('Autorização concedida!');
+                    this.stopAuthCheck();
+                    await this.getTokenWithAuthCode(data.authorizationCode);
+                    break;
+
+                case 'EXPIRED':
+                    console.log('Código expirado');
+                    this.stopAuthCheck();
+                    showToast('warning', 'Código expirado. Gere um novo se necessário.');
+                    break;
+
+                default:
+                    console.log('Status desconhecido:', data.status);
+                    break;
             }
         } catch (error) {
-            console.error('Erro detalhado ao verificar status:', error);
-            // Não mostra toast de erro para não sobrecarregar a interface
-            // showToast('error', 'Erro ao verificar status da autenticação');
-            
-            // Se o erro for de código expirado ou inválido, para a verificação
-            if (error.message.includes('404') || error.message.includes('EXPIRED')) {
-                console.log('Parando verificação devido a código inválido ou expirado');
-                if (this._authCheckInterval) {
-                    clearInterval(this._authCheckInterval);
-                    this._authCheckInterval = null;
-                }
-            }
+            console.error('Erro ao verificar status:', error);
+            // Não mostra toast para não sobrecarregar
+        } finally {
+            this._checking = false;
+        }
+    },
+
+    // Para a verificação de status
+    stopAuthCheck: function() {
+        if (this._authCheckInterval) {
+            clearInterval(this._authCheckInterval);
+            this._authCheckInterval = null;
+            console.log('Verificação periódica interrompida');
         }
     },
 
