@@ -175,53 +175,32 @@ generateUserCode: async function() {
 // Obtém o token de acesso usando o código de autorização
 getTokenWithAuthCode: async function(authorizationCode) {
     try {
-        // Diagnóstico completo
-        console.log('Dados de autenticação:');
-        console.log('Authorization Code:', authorizationCode);
-        console.log('Client ID:', this.credentials.client_id);
-        console.log('Code Verifier:', this.userCodeInfo.verifier);
-
-        // Verificações de integridade
-        if (!authorizationCode) {
-            throw new Error('Código de autorização não fornecido');
-        }
-
-        if (!this.userCodeInfo.verifier) {
-            throw new Error('Code verifier não encontrado');
-        }
-
-        // Preparação dos dados com verificação rigorosa
-        const authData = {
-            grant_type: 'authorization_code', // Atenção especial aqui
-            client_id: this.credentials.client_id,
-            client_secret: this.credentials.client_secret,
-            code: authorizationCode,
-            code_verifier: this.userCodeInfo.verifier
-        };
-
-        // Log detalhado dos dados
-        console.log('Dados da requisição:', JSON.stringify(authData, null, 2));
-
-        // Criar URLSearchParams com método mais robusto
+        // Preparação explícita do FormData
         const formData = new URLSearchParams();
-        Object.entries(authData).forEach(([key, value]) => {
-            if (value !== undefined && value !== null) {
-                console.log(`Adicionando ${key}: ${value}`);
-                formData.append(key, value);
-            }
+        
+        // Adição DIRETA de cada parâmetro
+        formData.append('grant_type', 'authorization_code');
+        formData.append('client_id', this.credentials.client_id);
+        formData.append('client_secret', this.credentials.client_secret);
+        formData.append('code', authorizationCode);
+        formData.append('code_verifier', this.userCodeInfo.verifier);
+
+        // Log dos dados para diagnóstico
+        console.log('Parâmetros enviados:', {
+            grant_type: 'authorization_code',
+            client_id: this.credentials.client_id,
+            client_secret: this.credentials.client_secret.substring(0, 10) + '...',
+            code: authorizationCode,
+            code_verifier: this.userCodeInfo.verifier.substring(0, 10) + '...'
         });
 
-        // Log do formData
-        console.log('FormData:', formData.toString());
-
-        // Requisição com tratamento de erro detalhado
         const response = await fetch(this.baseUrl + '/oauth/token', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/x-www-form-urlencoded',
                 'Accept': 'application/json'
             },
-            body: formData
+            body: formData.toString()
         });
 
         // Log do status da resposta
@@ -232,13 +211,7 @@ getTokenWithAuthCode: async function(authorizationCode) {
         console.log('Resposta bruta:', responseText);
 
         // Parse da resposta
-        let data;
-        try {
-            data = JSON.parse(responseText);
-        } catch (parseError) {
-            console.error('Erro ao parsear resposta:', parseError);
-            throw new Error('Resposta da API em formato inválido');
-        }
+        const data = JSON.parse(responseText);
 
         // Verificações de erro
         if (!response.ok) {
