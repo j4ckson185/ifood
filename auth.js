@@ -176,6 +176,7 @@ generateUserCode: async function() {
 },
 
 // Obtém o token de acesso usando o código de autorização
+// Obtém o token de acesso usando o código de autorização
 getTokenWithAuthCode: async function(authorizationCode) {
     try {
         console.log('🔍 DETALHES COMPLETOS DE AUTENTICAÇÃO:');
@@ -194,11 +195,11 @@ getTokenWithAuthCode: async function(authorizationCode) {
 
         const formData = new URLSearchParams();
         
-        // Adiciona parâmetros de forma EXATA
+        // Adiciona parâmetros de forma EXATA (Importante usar "grant_type" com underline e não "grantType")
         formData.append('grant_type', 'authorization_code');
         formData.append('client_id', this.credentials.client_id);
         formData.append('client_secret', this.credentials.client_secret);
-        formData.append('code', authorizationCode);
+        formData.append('code', authorizationCode);  // Use "code" em vez de "authorizationCode"
         formData.append('code_verifier', this.userCodeInfo.verifier);
 
         console.log('🔑 Parâmetros da requisição:', Object.fromEntries(formData));
@@ -262,7 +263,7 @@ getTokenWithAuthCode: async function(authorizationCode) {
         showToast('error', `Falha na autenticação: ${error.message}`);
         throw error;
     }
-},
+}
 
 // Para a verificação de status
 stopAuthCheck: function() {
