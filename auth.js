@@ -175,37 +175,51 @@ generateUserCode: async function() {
 // Obtém o token de acesso usando o código de autorização
 getTokenWithAuthCode: async function(authorizationCode) {
     try {
-        console.log('Iniciando obtenção do token com código:', authorizationCode);
-        console.log('UserCodeInfo atual:', this.userCodeInfo);
+        // Diagnóstico completo
+        console.log('Dados de autenticação:');
+        console.log('Authorization Code:', authorizationCode);
+        console.log('Client ID:', this.credentials.client_id);
+        console.log('Code Verifier:', this.userCodeInfo.verifier);
 
-        // Verifica se o código de verificação existe
-        if (!this.userCodeInfo.verifier) {
-            throw new Error('Código verificador não encontrado');
+        // Verificações de integridade
+        if (!authorizationCode) {
+            throw new Error('Código de autorização não fornecido');
         }
 
-        // Log detalhado dos parâmetros
-        const params = {
-            grant_type: 'authorization_code',
+        if (!this.userCodeInfo.verifier) {
+            throw new Error('Code verifier não encontrado');
+        }
+
+        // Preparação dos dados com verificação rigorosa
+        const authData = {
+            grant_type: 'authorization_code', // Atenção especial aqui
             client_id: this.credentials.client_id,
             client_secret: this.credentials.client_secret,
             code: authorizationCode,
             code_verifier: this.userCodeInfo.verifier
         };
 
-        console.log('Parâmetros da requisição:', JSON.stringify(params));
+        // Log detalhado dos dados
+        console.log('Dados da requisição:', JSON.stringify(authData, null, 2));
 
+        // Criar URLSearchParams com método mais robusto
         const formData = new URLSearchParams();
-        Object.entries(params).forEach(([key, value]) => {
-            console.log(`Adicionando ${key}: ${value}`);
-            formData.append(key, value);
+        Object.entries(authData).forEach(([key, value]) => {
+            if (value !== undefined && value !== null) {
+                console.log(`Adicionando ${key}: ${value}`);
+                formData.append(key, value);
+            }
         });
 
-        console.log('FormData toString:', formData.toString());
+        // Log do formData
+        console.log('FormData:', formData.toString());
 
+        // Requisição com tratamento de erro detalhado
         const response = await fetch(this.baseUrl + '/oauth/token', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/x-www-form-urlencoded',
+                'Accept': 'application/json'
             },
             body: formData
         });
@@ -213,33 +227,42 @@ getTokenWithAuthCode: async function(authorizationCode) {
         // Log do status da resposta
         console.log('Status da resposta:', response.status);
 
-        // Parse da resposta
-        const data = await response.json();
-        console.log('Dados da resposta:', JSON.stringify(data));
+        // Leitura da resposta
+        const responseText = await response.text();
+        console.log('Resposta bruta:', responseText);
 
-        // Verifica se a resposta foi bem-sucedida
+        // Parse da resposta
+        let data;
+        try {
+            data = JSON.parse(responseText);
+        } catch (parseError) {
+            console.error('Erro ao parsear resposta:', parseError);
+            throw new Error('Resposta da API em formato inválido');
+        }
+
+        // Verificações de erro
         if (!response.ok) {
-            console.error('Erro na resposta:', response.status, data);
+            console.error('Erro na resposta:', data);
             throw new Error(`Erro ao obter token: ${data.error?.message || 'Erro desconhecido'}`);
         }
 
-        // Verifica se o token de acesso foi recebido
+        // Verificação final do token
         if (!data.access_token) {
-            throw new Error('Token de acesso não recebido');
+            throw new Error('Nenhum token de acesso recebido');
         }
 
-        // Salva o token
+        // Salvamento do token
         this.saveToken(data);
         showToast('success', 'Token de acesso obtido com sucesso!');
         
-        // Limpa as informações do código de usuário
+        // Limpeza
         this.clearUserCode();
 
         return data;
 
     } catch (error) {
-        console.error('Erro ao obter token de acesso:', error);
-        showToast('error', `Erro na autenticação: ${error.message}`);
+        console.error('Erro completo ao obter token:', error);
+        showToast('error', `Falha na autenticação: ${error.message}`);
         throw error;
     }
 },
