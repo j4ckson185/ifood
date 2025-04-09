@@ -280,23 +280,28 @@ pollForEvents: async function() {
             return;
         }
         
-        // Tenta diferentes endpoints de polling
+        // Lista de endpoints para tentar
         const pollingEndpoints = [
             '/events:polling',
             '/merchant/v1.0/events:polling',
-            '/events/polling'
+            '/events/polling',
+            '/merchant/events:polling'
         ];
         
-        let events;
+        let events = null;
+        
+        // Tenta diferentes endpoints
         for (const endpoint of pollingEndpoints) {
             try {
+                console.log(`Tentando endpoint: ${endpoint}`);
                 events = await window.AUTH.apiRequest(endpoint, {
                     headers: {
                         'x-polling-merchants': merchantId
                     }
                 });
                 
-                if (events) break; // Para se encontrar eventos
+                // Se encontrar eventos, para de tentar outros endpoints
+                if (events) break;
             } catch (error) {
                 console.warn(`Erro no endpoint ${endpoint}:`, error);
             }
