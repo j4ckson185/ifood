@@ -92,6 +92,19 @@ window.AUTH = {
         document.getElementById('submit-auth-code')?.addEventListener('click', () => this.submitAuthorizationCode());
     },
 
+    // Atualiza os campos do formulário de configurações
+    updateSettingsForm: function() {
+        var clientIdInput = document.getElementById('client-id');
+        var clientSecretInput = document.getElementById('client-secret');
+        var merchantIdInput = document.getElementById('merchant-id-input');
+        var merchantUuidInput = document.getElementById('merchant-uuid-input');
+        
+        if (clientIdInput) clientIdInput.value = this.credentials.client_id;
+        if (clientSecretInput) clientSecretInput.value = this.credentials.client_secret;
+        if (merchantIdInput) merchantIdInput.value = this.credentials.merchantId;
+        if (merchantUuidInput) merchantUuidInput.value = this.credentials.merchantUuid;
+    },
+
     // Gera o código de usuário para autenticação
     generateUserCode: async function() {
         try {
