@@ -254,7 +254,7 @@ window.ORDERS = {
     /**
      * Faz uma chamada de polling para verificar novos eventos (Critério: Receber eventos via polling)
      */
-// Dentro do módulo ORDERS, modifique o método pollForEvents
+// Dentro do módulo ORDERS, módulo pollForEvents corrigido
 pollForEvents: async function() {
     try {
         if (!this.pollingEnabled) return;
@@ -285,9 +285,10 @@ pollForEvents: async function() {
         }
         
         // Faz a requisição de polling com o header x-polling-merchants
+        // Corrigindo a rota para /events/polling
         let events;
         try {
-            events = await window.AUTH.apiRequest('/polling', {
+            events = await window.AUTH.apiRequest('/events/polling', {
                 headers: {
                     'x-polling-merchants': merchantId
                 }
@@ -363,35 +364,36 @@ pollForEvents: async function() {
         this.saveOrdersData();
     },
     
-    /**
-     * Envia acknowledgment para os eventos processados (Critério: Enviar acknowledgment)
-     * @param {Array} eventIds Lista de IDs de eventos para enviar ack
-     */
-    sendAcknowledgment: async function(eventIds) {
-        try {
-            if (!eventIds || eventIds.length === 0) return;
+/**
+ * Envia acknowledgment para os eventos processados (Critério: Enviar acknowledgment)
+ * @param {Array} eventIds Lista de IDs de eventos para enviar ack
+ */
+sendAcknowledgment: async function(eventIds) {
+    try {
+        if (!eventIds || eventIds.length === 0) return;
+        
+        // Divide em lotes de 2000 IDs conforme requisito
+        const batchSize = 2000;
+        for (let i = 0; i < eventIds.length; i += batchSize) {
+            const batch = eventIds.slice(i, i + batchSize);
             
-            // Divide em lotes de 2000 IDs conforme requisito
-            const batchSize = 2000;
-            for (let i = 0; i < eventIds.length; i += batchSize) {
-                const batch = eventIds.slice(i, i + batchSize);
-                
-                await window.AUTH.apiRequest('/acknowledgment', {
-                    method: 'POST',
-                    body: JSON.stringify({
-                        eventIds: batch
-                    })
-                });
-            }
-            
-            console.log(`Acknowledgment enviado para ${eventIds.length} eventos.`);
-        } catch (error) {
-            console.error('Erro ao enviar acknowledgment:', error);
-            
-            // Adiciona aos pending acks para tentar novamente depois
-            this.pendingAcks.push(...eventIds);
+            // Corrigindo a rota para /events/acknowledgment
+            await window.AUTH.apiRequest('/events/acknowledgment', {
+                method: 'POST',
+                body: JSON.stringify({
+                    eventIds: batch
+                })
+            });
         }
-    },
+        
+        console.log(`Acknowledgment enviado para ${eventIds.length} eventos.`);
+    } catch (error) {
+        console.error('Erro ao enviar acknowledgment:', error);
+        
+        // Adiciona aos pending acks para tentar novamente depois
+        this.pendingAcks.push(...eventIds);
+    }
+},
     
     /**
      * Lida com um evento específico com base no seu código
