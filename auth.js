@@ -190,14 +190,22 @@ getTokenWithAuthCode: async function(authorizationCode) {
             console.log('Iniciando obtenção do token com código:', authorizationCode);
             console.log('UserCodeInfo atual:', this.userCodeInfo);
 
-            const formData = new URLSearchParams();
-            formData.append('grant_type', 'authorization_code');
-            formData.append('code', authorizationCode);
-            formData.append('client_id', this.credentials.client_id);
-            formData.append('client_secret', this.credentials.client_secret);
-            formData.append('code_verifier', this.userCodeInfo.verifier);
+            const data = {
+                grant_type: 'authorization_code',
+                client_id: this.credentials.client_id,
+                client_secret: this.credentials.client_secret,
+                code: authorizationCode,
+                code_verifier: this.userCodeInfo.verifier
+            };
 
-            console.log('Dados do formulário:', formData.toString());
+            console.log('Dados a serem enviados:', data);
+
+            const formData = new URLSearchParams();
+            for (const [key, value] of Object.entries(data)) {
+                if (value) formData.append(key, value);
+            }
+
+            console.log('FormData preparado:', formData.toString());
 
             const response = await fetch(this.baseUrl + '/oauth/token', {
                 method: 'POST',
@@ -208,13 +216,15 @@ getTokenWithAuthCode: async function(authorizationCode) {
                 body: formData.toString()
             });
 
+            const responseText = await response.text();
+            console.log('Resposta bruta:', responseText);
+
             if (!response.ok) {
-                const errorText = await response.text();
-                console.error('Erro ao obter token:', errorText);
-                throw new Error('Falha ao obter token de acesso: ' + errorText);
+                console.error('Erro na resposta:', response.status, responseText);
+                throw new Error('Falha ao obter token de acesso: ' + responseText);
             }
 
-            const tokenData = await response.json();
+            const tokenData = JSON.parse(responseText);
             console.log('Token obtido:', tokenData);
             
             if (!tokenData.access_token) {
