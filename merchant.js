@@ -146,10 +146,6 @@ window.MERCHANT = {
         });
     },
     
-/**
- * Lista todas as lojas do merchant (Critério: Listar Lojas)
- * GET /merchant/v1.0/merchants
- */
 listMerchants: async function() {
     try {
         console.log('Tentando listar merchants com o token:', AUTH.token.access_token ? 'Token disponível' : 'Token não disponível');
@@ -160,10 +156,9 @@ listMerchants: async function() {
         
         // Se houver lojas, usa a primeira ou a que corresponde ao ID configurado
         if (merchants && merchants.length > 0) {
-            // Procura pela loja com o ID configurado
+            // Procura pela loja com o ID configurado (numérico)
             const configuredMerchant = merchants.find(m => 
-                m.id === AUTH.credentials.merchantId || 
-                m.uuid === AUTH.credentials.merchantUuid
+                m.id === AUTH.credentials.merchantId
             );
             
             // Se encontrar, usa ela, senão usa a primeira
@@ -171,11 +166,10 @@ listMerchants: async function() {
                 this.currentMerchant = configuredMerchant;
             } else {
                 this.currentMerchant = merchants[0];
-                // Atualiza as credenciais diretamente em vez de usar saveCredentials
+                // Atualiza as credenciais diretamente
                 AUTH.credentials.merchantId = merchants[0].id;
                 AUTH.credentials.merchantUuid = merchants[0].uuid;
                 
-                // Adiciona um log para confirmar a atualização
                 console.log('Credenciais atualizadas para', {
                     merchantId: merchants[0].id,
                     merchantUuid: merchants[0].uuid
@@ -192,62 +186,55 @@ listMerchants: async function() {
         throw error;
     }
 },
-    
-    /**
-     * Obtém detalhes de um merchant específico (Critério: Listar detalhes da loja)
-     * GET /merchants/{merchantId}
-     */
+        
+async getMerchantStatus() {
+    try {
+        const merchantId = AUTH.credentials.merchantId;
+        if (!merchantId) {
+            throw new Error('ID do merchant não configurado');
+        }
+        
+        // Ajuste no endpoint para corresponder à documentação
+        const status = await AUTH.apiRequest(`/merchant/v1.0/merchants/${merchantId}/status`);
+        console.log('Merchant Status:', status);
+        
+        this.currentStatus = status;
+        this.updateStatusUI();
+        this.saveData();
+        
+        return status;
+    } catch (error) {
+        console.error('Erro ao obter status do merchant:', error);
+        throw error;
+    }
+},
+
 async getMerchantDetails() {
-        try {
-            const merchantId = AUTH.credentials.merchantId;
-            if (!merchantId) {
-                throw new Error('ID do merchant não configurado');
-            }
-            
-            // Use the merchant ID (which is a string) instead of the UUID
-            const merchantDetails = await AUTH.apiRequest(`/merchant/v1.0/merchants/${merchantId}`);
-            console.log('Merchant Details:', merchantDetails);
-            
-            // Atualiza os dados do merchant atual
-            this.currentMerchant = {
-                ...this.currentMerchant,
-                ...merchantDetails
-            };
-            
-            this.updateMerchantUI();
-            this.saveData();
-            
-            return merchantDetails;
-        } catch (error) {
-            console.error('Erro ao obter detalhes do merchant:', error);
-            throw error;
+    try {
+        const merchantId = AUTH.credentials.merchantId;
+        if (!merchantId) {
+            throw new Error('ID do merchant não configurado');
         }
-    },
-    
-    /**
-     * Obtém o status atual do merchant (Critério: Listar status da loja)
-     * GET /merchants/{merchantId}/status
-     */
-    async getMerchantStatus() {
-        try {
-            const merchantId = AUTH.credentials.merchantId;
-            if (!merchantId) {
-                throw new Error('ID do merchant não configurado');
-            }
-            
-            const status = await AUTH.apiRequest(`/merchants/${merchantId}/status`);
-            console.log('Merchant Status:', status);
-            
-            this.currentStatus = status;
-            this.updateStatusUI();
-            this.saveData();
-            
-            return status;
-        } catch (error) {
-            console.error('Erro ao obter status do merchant:', error);
-            throw error;
-        }
-    },
+        
+        // Ajuste no endpoint para corresponder à documentação
+        const merchantDetails = await AUTH.apiRequest(`/merchant/v1.0/merchants/${merchantId}`);
+        console.log('Merchant Details:', merchantDetails);
+        
+        // Atualiza os dados do merchant atual
+        this.currentMerchant = {
+            ...this.currentMerchant,
+            ...merchantDetails
+        };
+        
+        this.updateMerchantUI();
+        this.saveData();
+        
+        return merchantDetails;
+    } catch (error) {
+        console.error('Erro ao obter detalhes do merchant:', error);
+        throw error;
+    }
+},
     
     /**
      * Alterna o status da loja (aberto/fechado)
@@ -609,26 +596,23 @@ async getMerchantDetails() {
         }
     },
     
-    /**
-     * Atualiza a UI com os dados do merchant
-     */
-    updateMerchantUI() {
-        // Atualiza os elementos da UI com os dados do merchant
-        if (this.currentMerchant) {
-            // Informações básicas
-            const merchantNameElems = document.querySelectorAll('#merchant-name, .merchant-name');
-            merchantNameElems.forEach(elem => {
-                if (elem) elem.textContent = this.currentMerchant.name || '-';
-            });
-            
-            const merchantIdElems = document.querySelectorAll('#merchant-id, #merchant-id-display');
-            merchantIdElems.forEach(elem => {
-                if (elem) elem.textContent = this.currentMerchant.id || '-';
-            });
-            
-            if (document.getElementById('merchant-uuid')) {
-                document.getElementById('merchant-uuid').textContent = this.currentMerchant.uuid || '-';
-            }
+updateMerchantUI() {
+    // Atualiza os elementos da UI com os dados do merchant
+    if (this.currentMerchant) {
+        // Informações básicas
+        const merchantNameElems = document.querySelectorAll('#merchant-name, .merchant-name');
+        merchantNameElems.forEach(elem => {
+            if (elem) elem.textContent = this.currentMerchant.name || '-';
+        });
+        
+        const merchantIdElems = document.querySelectorAll('#merchant-id, #merchant-id-display');
+        merchantIdElems.forEach(elem => {
+            if (elem) elem.textContent = this.currentMerchant.id || '-';
+        });
+        
+        if (document.getElementById('merchant-uuid')) {
+            document.getElementById('merchant-uuid').textContent = this.currentMerchant.uuid || '-';
+        }
             
             // Endereço
             if (document.getElementById('merchant-address')) {
