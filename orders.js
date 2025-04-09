@@ -251,10 +251,6 @@ window.ORDERS = {
         }
     },
     
-    /**
-     * Faz uma chamada de polling para verificar novos eventos (Critério: Receber eventos via polling)
-     */
-// Dentro do módulo ORDERS, módulo pollForEvents corrigido com a rota correta
 pollForEvents: async function() {
     try {
         if (!this.pollingEnabled) return;
@@ -284,19 +280,26 @@ pollForEvents: async function() {
             return;
         }
         
-        // Faz a requisição de polling com o header x-polling-merchants
-        // Corrigindo a rota para /events:polling (com dois pontos)
+        // Tenta diferentes endpoints de polling
+        const pollingEndpoints = [
+            '/events:polling',
+            '/merchant/v1.0/events:polling',
+            '/events/polling'
+        ];
+        
         let events;
-        try {
-            events = await window.AUTH.apiRequest('/events:polling', {
-                headers: {
-                    'x-polling-merchants': merchantId
-                }
-            });
-        } catch (error) {
-            console.warn('Erro no polling, tentando continuar:', error);
-            showToast('warning', 'Erro ao verificar novos eventos');
-            return;
+        for (const endpoint of pollingEndpoints) {
+            try {
+                events = await window.AUTH.apiRequest(endpoint, {
+                    headers: {
+                        'x-polling-merchants': merchantId
+                    }
+                });
+                
+                if (events) break; // Para se encontrar eventos
+            } catch (error) {
+                console.warn(`Erro no endpoint ${endpoint}:`, error);
+            }
         }
         
         // Se a resposta for nula ou indefinida, considera como vazia
