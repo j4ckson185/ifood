@@ -112,19 +112,21 @@ generateUserCode: async function() {
 
         console.log('Iniciando geração de código de usuário...');
 
-        const formData = new URLSearchParams();
-        formData.append('clientId', this.credentials.client_id);
-        formData.append('grantType', 'authorization_code');
+const formData = new URLSearchParams();
+formData.append('grant_type', 'authorization_code');
+formData.append('client_id', this.credentials.client_id);
+formData.append('client_secret', this.credentials.client_secret);
+formData.append('code', authorizationCode);
+formData.append('code_verifier', this.userCodeInfo.verifier);
 
-        console.log('Enviando requisição para gerar código...');
-        const response = await fetch(this.baseUrl + '/oauth/userCode', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/x-www-form-urlencoded',
-                'Accept': 'application/json'
-            },
-            body: formData.toString()
-        });
+const response = await fetch(this.baseUrl + '/oauth/token', {
+    method: 'POST',
+    headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+        'Accept': 'application/json'
+    },
+    body: formData.toString()
+});
 
         if (!response.ok) {
             const errorText = await response.text();
