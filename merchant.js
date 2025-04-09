@@ -33,7 +33,55 @@ window.MERCHANT = {
         }
     },
 
-    // [Todos os métodos anteriores: initEventListeners, saveData, loadAllMerchantData, etc.]
+    initEventListeners: function() {
+    // Botão de atualizar dados do merchant
+    var refreshMerchantBtn = document.getElementById('refresh-merchant');
+    if (refreshMerchantBtn) {
+        refreshMerchantBtn.addEventListener('click', () => {
+            this.loadAllMerchantData();
+        });
+    }
+    
+    // Botão de alternar status da loja
+    var toggleStatusBtn = document.getElementById('toggle-store-status');
+    if (toggleStatusBtn) {
+        toggleStatusBtn.addEventListener('click', () => {
+            this.toggleMerchantStatus();
+        });
+    }
+    
+    // Botão de criar interrupção
+    var createInterruptionBtn = document.getElementById('create-interruption');
+    if (createInterruptionBtn) {
+        createInterruptionBtn.addEventListener('click', () => {
+            this.showInterruptionModal();
+        });
+    }
+    
+    // Botão de confirmar criação de interrupção
+    var confirmInterruptionBtn = document.getElementById('confirm-interruption');
+    if (confirmInterruptionBtn) {
+        confirmInterruptionBtn.addEventListener('click', () => {
+            this.createInterruption();
+        });
+    }
+    
+    // Botão de editar horários de funcionamento
+    var editOpeningHoursBtn = document.getElementById('edit-opening-hours');
+    if (editOpeningHoursBtn) {
+        editOpeningHoursBtn.addEventListener('click', () => {
+            this.showOpeningHoursModal();
+        });
+    }
+    
+    // Botão de salvar horários de funcionamento
+    var saveOpeningHoursBtn = document.getElementById('save-opening-hours');
+    if (saveOpeningHoursBtn) {
+        saveOpeningHoursBtn.addEventListener('click', () => {
+            this.updateOpeningHours();
+        });
+    }
+},
 
     /**
      * Obtém os horários de funcionamento da loja (Critério: Listar horário de funcionamento)
