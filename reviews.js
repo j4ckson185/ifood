@@ -88,7 +88,7 @@ fetchReviews: function() {
             }
             
             // Faz a requisição para obter as avaliações (usando a nova rota)
-            window.AUTH.apiRequest('/merchant/v1.0/merchants/' + merchantId + '/reviews')
+            window.AUTH.apiRequest('/review/v2.0/merchants/' + merchantId + '/reviews')
                 .then(function(reviews) {
                     console.log('Reviews:', reviews);
                     
