@@ -203,16 +203,16 @@ getTokenWithAuthCode: async function(authorizationCode) {
 
         console.log('🔑 Parâmetros da requisição:', Object.fromEntries(formData));
 
-const formData = `grant_type=authorization_code&client_id=${encodeURIComponent(this.credentials.client_id)}&client_secret=${encodeURIComponent(this.credentials.client_secret)}&code=${encodeURIComponent(authorizationCode)}&code_verifier=${encodeURIComponent(this.userCodeInfo.verifier)}`;
-
-const response = await fetch(this.baseUrl + '/oauth/token', {
-    method: 'POST',
-    headers: {
-        'Content-Type': 'application/x-www-form-urlencoded',
-        'Accept': 'application/json'
-    },
-    body: formData
-});
+        const response = await fetch(this.baseUrl + '/oauth/token', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+                'Accept': 'application/json',
+                // Adiciona headers de depuração
+                'X-Debug-Request': 'true'
+            },
+            body: formData.toString()
+        });
 
         console.log('📡 Resposta do servidor:');
         console.log('Status:', response.status);
