@@ -87,7 +87,7 @@ init: function() {
         // Preencher campos do formulário de configurações com valores atuais
         this.updateSettingsForm();
 
-        // Adiciona os event listeners para os botões de autenticação
+// Adiciona os event listeners para os botões de autenticação
         document.getElementById('generate-user-code')?.addEventListener('click', () => this.generateUserCode());
         document.getElementById('submit-auth-code')?.addEventListener('click', () => this.submitAuthorizationCode());
     },
