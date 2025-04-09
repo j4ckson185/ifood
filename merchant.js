@@ -146,52 +146,41 @@ window.MERCHANT = {
         });
     },
     
+/**
+ * Lista todas as lojas do merchant (Critério: Listar Lojas)
+ * GET /merchant/v1.0/merchants
+ */
 listMerchants: async function() {
     try {
         console.log('Tentando listar merchants com o token:', AUTH.token.access_token ? 'Token disponível' : 'Token não disponível');
         
         // Usando a nova rota sugerida
         const merchants = await AUTH.apiRequest('/merchant/v1.0/merchants');
-        console.log('Merchants recebidos:', merchants);
+        console.log('Merchants:', merchants);
         
         // Se houver lojas, usa a primeira ou a que corresponde ao ID configurado
         if (merchants && merchants.length > 0) {
-            // Log detalhado de cada merchant
-            merchants.forEach(merchant => {
-                console.log('Merchant individual:', {
-                    id: merchant.id,
-                    uuid: merchant.uuid,
-                    name: merchant.name
-                });
-            });
-
-            // Procura pela loja com o ID configurado (numérico)
-            let selectedMerchant = merchants.find(m => 
-                m.id === AUTH.credentials.merchantId
+            // Procura pela loja com o ID configurado
+            const configuredMerchant = merchants.find(m => 
+                m.id === AUTH.credentials.merchantId || 
+                m.uuid === AUTH.credentials.merchantUuid
             );
             
-            // Se não encontrar pelo ID, tenta pelo UUID
-            if (!selectedMerchant) {
-                selectedMerchant = merchants.find(m => 
-                    m.uuid === AUTH.credentials.merchantUuid
-                );
+            // Se encontrar, usa ela, senão usa a primeira
+            if (configuredMerchant) {
+                this.currentMerchant = configuredMerchant;
+            } else {
+                this.currentMerchant = merchants[0];
+                // Atualiza as credenciais diretamente em vez de usar saveCredentials
+                AUTH.credentials.merchantId = merchants[0].id;
+                AUTH.credentials.merchantUuid = merchants[0].uuid;
+                
+                // Adiciona um log para confirmar a atualização
+                console.log('Credenciais atualizadas para', {
+                    merchantId: merchants[0].id,
+                    merchantUuid: merchants[0].uuid
+                });
             }
-            
-            // Se ainda não encontrou, usa o primeiro
-            if (!selectedMerchant) {
-                selectedMerchant = merchants[0];
-            }
-            
-            // Atualiza as credenciais
-            AUTH.credentials.merchantId = selectedMerchant.id;
-            AUTH.credentials.merchantUuid = selectedMerchant.uuid;
-            
-            console.log('Credenciais atualizadas para:', {
-                merchantId: selectedMerchant.id,
-                merchantUuid: selectedMerchant.uuid
-            });
-            
-            this.currentMerchant = selectedMerchant;
             
             this.updateMerchantUI();
             this.saveData();
@@ -203,55 +192,62 @@ listMerchants: async function() {
         throw error;
     }
 },
-        
-async getMerchantStatus() {
-    try {
-        const merchantId = AUTH.credentials.merchantId;
-        if (!merchantId) {
-            throw new Error('ID do merchant não configurado');
-        }
-        
-        // Ajuste no endpoint para corresponder à documentação
-        const status = await AUTH.apiRequest(`/merchant/v1.0/merchants/${merchantId}/status`);
-        console.log('Merchant Status:', status);
-        
-        this.currentStatus = status;
-        this.updateStatusUI();
-        this.saveData();
-        
-        return status;
-    } catch (error) {
-        console.error('Erro ao obter status do merchant:', error);
-        throw error;
-    }
-},
-
+    
+    /**
+     * Obtém detalhes de um merchant específico (Critério: Listar detalhes da loja)
+     * GET /merchants/{merchantId}
+     */
 async getMerchantDetails() {
-    try {
-        const merchantId = AUTH.credentials.merchantId;
-        if (!merchantId) {
-            throw new Error('ID do merchant não configurado');
+        try {
+            const merchantId = AUTH.credentials.merchantId;
+            if (!merchantId) {
+                throw new Error('ID do merchant não configurado');
+            }
+            
+            // Use the merchant ID (which is a string) instead of the UUID
+            const merchantDetails = await AUTH.apiRequest(`/merchant/v1.0/merchants/${merchantId}`);
+            console.log('Merchant Details:', merchantDetails);
+            
+            // Atualiza os dados do merchant atual
+            this.currentMerchant = {
+                ...this.currentMerchant,
+                ...merchantDetails
+            };
+            
+            this.updateMerchantUI();
+            this.saveData();
+            
+            return merchantDetails;
+        } catch (error) {
+            console.error('Erro ao obter detalhes do merchant:', error);
+            throw error;
         }
-        
-        // Ajuste no endpoint para corresponder à documentação
-        const merchantDetails = await AUTH.apiRequest(`/merchant/v1.0/merchants/${merchantId}`);
-        console.log('Merchant Details:', merchantDetails);
-        
-        // Atualiza os dados do merchant atual
-        this.currentMerchant = {
-            ...this.currentMerchant,
-            ...merchantDetails
-        };
-        
-        this.updateMerchantUI();
-        this.saveData();
-        
-        return merchantDetails;
-    } catch (error) {
-        console.error('Erro ao obter detalhes do merchant:', error);
-        throw error;
-    }
-},
+    },
+    
+    /**
+     * Obtém o status atual do merchant (Critério: Listar status da loja)
+     * GET /merchants/{merchantId}/status
+     */
+    async getMerchantStatus() {
+        try {
+            const merchantId = AUTH.credentials.merchantId;
+            if (!merchantId) {
+                throw new Error('ID do merchant não configurado');
+            }
+            
+            const status = await AUTH.apiRequest(`/merchants/${merchantId}/status`);
+            console.log('Merchant Status:', status);
+            
+            this.currentStatus = status;
+            this.updateStatusUI();
+            this.saveData();
+            
+            return status;
+        } catch (error) {
+            console.error('Erro ao obter status do merchant:', error);
+            throw error;
+        }
+    },
     
     /**
      * Alterna o status da loja (aberto/fechado)
@@ -294,105 +290,26 @@ async getMerchantDetails() {
      * Lista as interrupções do merchant (Critério: Listar uma interrupção)
      * GET /merchants/{merchantId}/interruptions
      */
-async listInterruptions() {
-    try {
-        const merchantId = AUTH.credentials.merchantId;
-        if (!merchantId) {
-            throw new Error('ID do merchant não configurado');
-        }
-        
-        console.log('Buscando interrupções para o merchant ID:', merchantId);
-        
-        // Tenta primeiro com o endpoint mais provável
+    async listInterruptions() {
         try {
-            const interruptions = await AUTH.apiRequest(`/merchant/v1.0/merchants/${merchantId}/interruptions`);
-            console.log('Interruptions:', interruptions);
+            const merchantId = AUTH.credentials.merchantId;
+            if (!merchantId) {
+                throw new Error('ID do merchant não configurado');
+            }
+            
+            const interruptions = await AUTH.apiRequest(`/merchants/${merchantId}/interruptions`);
+            console.log('Merchant Interruptions:', interruptions);
             
             this.interruptions = interruptions || [];
             this.updateInterruptionsUI();
             this.saveData();
             
             return interruptions;
-        } catch (firstError) {
-            console.warn('Erro no primeiro endpoint de interrupções:', firstError);
-            
-            // Tenta um endpoint alternativo
-            try {
-                const alternativeInterruptions = await AUTH.apiRequest(`/merchants/${merchantId}/interruptions`);
-                console.log('Interruptions (endpoint alternativo):', alternativeInterruptions);
-                
-                this.interruptions = alternativeInterruptions || [];
-                this.updateInterruptionsUI();
-                this.saveData();
-                
-                return alternativeInterruptions;
-            } catch (secondError) {
-                console.error('Erro em ambos os endpoints de interrupções:', secondError);
-                throw secondError;
-            }
+        } catch (error) {
+            console.error('Erro ao listar interrupções:', error);
+            throw error;
         }
-    } catch (error) {
-        console.error('Erro ao listar interrupções:', error);
-        throw error;
-    }
-},
-
-async getOpeningHours() {
-    try {
-        const merchantId = AUTH.credentials.merchantId;
-        if (!merchantId) {
-            throw new Error('ID do merchant não configurado');
-        }
-        
-        console.log('Buscando horários de funcionamento para o merchant ID:', merchantId);
-        
-        // Tenta primeiro com o endpoint mais provável
-        try {
-            const openingHours = await AUTH.apiRequest(`/merchant/v1.0/merchants/${merchantId}/opening-hours`);
-            console.log('Opening Hours:', openingHours);
-            
-            // Verifica se o retorno é um array válido
-            this.openingHours = Array.isArray(openingHours) ? openingHours : [];
-            
-            this.updateOpeningHoursUI();
-            this.saveData();
-            
-            return this.openingHours;
-        } catch (firstError) {
-            console.warn('Erro no primeiro endpoint de horários:', firstError);
-            
-            // Tenta um endpoint alternativo
-            try {
-                const alternativeOpeningHours = await AUTH.apiRequest(`/merchants/${merchantId}/opening-hours`);
-                console.log('Opening Hours (endpoint alternativo):', alternativeOpeningHours);
-                
-                // Verifica se o retorno é um array válido
-                this.openingHours = Array.isArray(alternativeOpeningHours) ? alternativeOpeningHours : [];
-                
-                this.updateOpeningHoursUI();
-                this.saveData();
-                
-                return this.openingHours;
-            } catch (secondError) {
-                console.error('Erro em ambos os endpoints de horários:', secondError);
-                
-                // Define como array vazio para evitar erros
-                this.openingHours = [];
-                this.updateOpeningHoursUI();
-                
-                throw secondError;
-            }
-        }
-    } catch (error) {
-        console.error('Erro ao obter horários de funcionamento:', error);
-        
-        // Define como array vazio para evitar erros
-        this.openingHours = [];
-        this.updateOpeningHoursUI();
-        
-        throw error;
-    }
-},
+    },
     
     /**
      * Exibe o modal para criar uma interrupção
@@ -525,6 +442,31 @@ async getOpeningHours() {
             throw error;
         } finally {
             showLoading(false);
+        }
+    },
+    
+    /**
+     * Obtém os horários de funcionamento da loja (Critério: Listar horário de funcionamento)
+     * GET /merchants/{merchantId}/opening-hours
+     */
+    async getOpeningHours() {
+        try {
+            const merchantId = AUTH.credentials.merchantId;
+            if (!merchantId) {
+                throw new Error('ID do merchant não configurado');
+            }
+            
+            const openingHours = await AUTH.apiRequest(`/merchants/${merchantId}/opening-hours`);
+            console.log('Opening Hours:', openingHours);
+            
+            this.openingHours = openingHours;
+            this.updateOpeningHoursUI();
+            this.saveData();
+            
+            return openingHours;
+        } catch (error) {
+            console.error('Erro ao obter horários de funcionamento:', error);
+            throw error;
         }
     },
     
@@ -667,23 +609,26 @@ async getOpeningHours() {
         }
     },
     
-updateMerchantUI() {
-    // Atualiza os elementos da UI com os dados do merchant
-    if (this.currentMerchant) {
-        // Informações básicas
-        const merchantNameElems = document.querySelectorAll('#merchant-name, .merchant-name');
-        merchantNameElems.forEach(elem => {
-            if (elem) elem.textContent = this.currentMerchant.name || '-';
-        });
-        
-        const merchantIdElems = document.querySelectorAll('#merchant-id, #merchant-id-display');
-        merchantIdElems.forEach(elem => {
-            if (elem) elem.textContent = this.currentMerchant.id || '-';
-        });
-        
-        if (document.getElementById('merchant-uuid')) {
-            document.getElementById('merchant-uuid').textContent = this.currentMerchant.uuid || '-';
-        }
+    /**
+     * Atualiza a UI com os dados do merchant
+     */
+    updateMerchantUI() {
+        // Atualiza os elementos da UI com os dados do merchant
+        if (this.currentMerchant) {
+            // Informações básicas
+            const merchantNameElems = document.querySelectorAll('#merchant-name, .merchant-name');
+            merchantNameElems.forEach(elem => {
+                if (elem) elem.textContent = this.currentMerchant.name || '-';
+            });
+            
+            const merchantIdElems = document.querySelectorAll('#merchant-id, #merchant-id-display');
+            merchantIdElems.forEach(elem => {
+                if (elem) elem.textContent = this.currentMerchant.id || '-';
+            });
+            
+            if (document.getElementById('merchant-uuid')) {
+                document.getElementById('merchant-uuid').textContent = this.currentMerchant.uuid || '-';
+            }
             
             // Endereço
             if (document.getElementById('merchant-address')) {
@@ -812,61 +757,65 @@ updateMerchantUI() {
         });
     },
     
-updateOpeningHoursUI() {
-    const openingHoursList = document.getElementById('opening-hours-list');
-    if (!openingHoursList) return;
-    
-    // Limpa a lista atual
-    openingHoursList.innerHTML = '';
-    
-    // Verifica se openingHours existe e é um array
-    if (!this.openingHours || !Array.isArray(this.openingHours) || this.openingHours.length === 0) {
-        openingHoursList.innerHTML = '<p class="no-data">Nenhum horário de funcionamento definido.</p>';
-        return;
+    /**
+     * Atualiza a UI com os horários de funcionamento
+     */
+    updateOpeningHoursUI() {
+        const openingHoursList = document.getElementById('opening-hours-list');
+        if (!openingHoursList) return;
+        
+        // Limpa a lista atual
+        openingHoursList.innerHTML = '';
+        
+        // Se não houver horários, mostra mensagem
+        if (!this.openingHours || this.openingHours.length === 0) {
+            openingHoursList.innerHTML = '<p class="no-data">Nenhum horário de funcionamento definido.</p>';
+            return;
+        }
+        
+        // Mapeia os dias da semana para português
+        const weekdayMap = {
+            'MONDAY': 'Segunda-feira',
+            'TUESDAY': 'Terça-feira',
+            'WEDNESDAY': 'Quarta-feira',
+            'THURSDAY': 'Quinta-feira',
+            'FRIDAY': 'Sexta-feira',
+            'SATURDAY': 'Sábado',
+            'SUNDAY': 'Domingo'
+        };
+        
+        // Ordena os dias da semana
+        const weekdayOrder = {
+            'MONDAY': 1,
+            'TUESDAY': 2,
+            'WEDNESDAY': 3,
+            'THURSDAY': 4,
+            'FRIDAY': 5,
+            'SATURDAY': 6,
+            'SUNDAY': 7
+        };
+        
+        const sortedHours = [...this.openingHours].sort((a, b) => {
+            return weekdayOrder[a.weekday] - weekdayOrder[b.weekday];
+        });
+        
+        // Para cada dia, cria um item na lista
+        sortedHours.forEach(day => {
+            const dayName = weekdayMap[day.weekday] || day.weekday;
+            
+            // Formata os horários
+            const opens = day.workingDay.opens;
+            const closes = day.workingDay.closes;
+            
+            // Cria o elemento HTML
+            const dayElem = document.createElement('div');
+            dayElem.className = 'opening-hours-item';
+            dayElem.innerHTML = `
+                <div class="weekday">${dayName}</div>
+                <div class="hours">${opens} - ${closes}</div>
+            `;
+            
+            openingHoursList.appendChild(dayElem);
+        });
     }
-    
-    // Mapeia os dias da semana para português
-    const weekdayMap = {
-        'MONDAY': 'Segunda-feira',
-        'TUESDAY': 'Terça-feira',
-        'WEDNESDAY': 'Quarta-feira',
-        'THURSDAY': 'Quinta-feira',
-        'FRIDAY': 'Sexta-feira',
-        'SATURDAY': 'Sábado',
-        'SUNDAY': 'Domingo'
-    };
-    
-    // Ordena os dias da semana
-    const weekdayOrder = {
-        'MONDAY': 1,
-        'TUESDAY': 2,
-        'WEDNESDAY': 3,
-        'THURSDAY': 4,
-        'FRIDAY': 5,
-        'SATURDAY': 6,
-        'SUNDAY': 7
-    };
-    
-    const sortedHours = [...this.openingHours].sort((a, b) => {
-        return weekdayOrder[a.weekday] - weekdayOrder[b.weekday];
-    });
-    
-    // Para cada dia, cria um item na lista
-    sortedHours.forEach(day => {
-        const dayName = weekdayMap[day.weekday] || day.weekday;
-        
-        // Verifica se workingDay existe
-        const opens = day.workingDay ? day.workingDay.opens : 'N/A';
-        const closes = day.workingDay ? day.workingDay.closes : 'N/A';
-        
-        // Cria o elemento HTML
-        const dayElem = document.createElement('div');
-        dayElem.className = 'opening-hours-item';
-        dayElem.innerHTML = `
-            <div class="weekday">${dayName}</div>
-            <div class="hours">${opens} - ${closes}</div>
-        `;
-        
-        openingHoursList.appendChild(dayElem);
-    });
-}
+};
