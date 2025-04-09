@@ -178,20 +178,12 @@ getTokenWithAuthCode: async function(authorizationCode) {
         console.log('Iniciando obtenção do token com código:', authorizationCode);
         console.log('UserCodeInfo atual:', this.userCodeInfo);
 
-        const data = {
-            grant_type: 'authorization_code',
-            client_id: this.credentials.client_id,
-            client_secret: this.credentials.client_secret,
-            code: authorizationCode,
-            code_verifier: this.userCodeInfo.verifier
-        };
-
-        console.log('Dados a serem enviados:', data);
-
         const formData = new URLSearchParams();
-        for (const [key, value] of Object.entries(data)) {
-            if (value) formData.append(key, value);
-        }
+        formData.append('grant_type', 'authorization_code');
+        formData.append('client_id', this.credentials.client_id);
+        formData.append('client_secret', this.credentials.client_secret);
+        formData.append('code', authorizationCode);
+        formData.append('code_verifier', this.userCodeInfo.verifier);
 
         console.log('FormData preparado:', formData.toString());
 
