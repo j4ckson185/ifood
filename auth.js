@@ -97,15 +97,18 @@ generateUserCode: async function() {
         try {
             showLoading(true);
 
-            // Prepara os dados como form-url-encoded
+            console.log('Iniciando geração de código de usuário...');
+
             const formData = new URLSearchParams();
             formData.append('clientId', this.credentials.client_id);
             formData.append('grantType', 'authorization_code');
 
+            console.log('Enviando requisição para gerar código...');
             const response = await fetch(this.baseUrl + '/oauth/userCode', {
                 method: 'POST',
                 headers: {
-                    'Content-Type': 'application/x-www-form-urlencoded'
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                    'Accept': 'application/json'
                 },
                 body: formData.toString()
             });
@@ -117,16 +120,26 @@ generateUserCode: async function() {
             }
 
             const data = await response.json();
+            console.log('Resposta da API:', data);
+
+            // Verificação dos campos obrigatórios
+            if (!data.userCode || !data.verifier) {
+                console.error('Dados incompletos recebidos da API:', data);
+                throw new Error('Resposta incompleta da API');
+            }
             
             // Salva as informações do código
             this.userCodeInfo = {
                 userCode: data.userCode,
-                verificationUrl: data.verificationUrl,
-                verificationUrlComplete: data.verificationUrlComplete,
-                expiresIn: data.expiresIn,
-                interval: data.interval,
-                verifier: data.verifier
+                verificationUrl: data.verificationUrl || 'https://portal.ifood.com.br/apps/code',
+                verificationUrlComplete: data.verificationUrlComplete || 
+                    `https://portal.ifood.com.br/apps/code?c=${data.userCode}`,
+                expiresIn: data.expiresIn || 600,
+                interval: data.interval || 5,
+                verifier: data.verifier // Campo obrigatório
             };
+
+            console.log('UserCodeInfo salvo:', this.userCodeInfo);
 
             // Salva no localStorage
             localStorage.setItem('ifood_user_code', JSON.stringify(this.userCodeInfo));
@@ -137,7 +150,7 @@ generateUserCode: async function() {
             showToast('success', 'Código de autenticação gerado com sucesso!');
         } catch (error) {
             console.error('Erro ao gerar código de usuário:', error);
-            showToast('error', 'Erro ao gerar código de autenticação');
+            showToast('error', 'Erro ao gerar código de autenticação: ' + error.message);
         } finally {
             showLoading(false);
         }
@@ -174,17 +187,23 @@ generateUserCode: async function() {
     // Obtém o token de acesso usando o código de autorização
 getTokenWithAuthCode: async function(authorizationCode) {
         try {
+            console.log('Iniciando obtenção do token com código:', authorizationCode);
+            console.log('UserCodeInfo atual:', this.userCodeInfo);
+
             const formData = new URLSearchParams();
             formData.append('grant_type', 'authorization_code');
             formData.append('code', authorizationCode);
             formData.append('client_id', this.credentials.client_id);
             formData.append('client_secret', this.credentials.client_secret);
-            formData.append('verifier', this.userCodeInfo.verifier);
+            formData.append('code_verifier', this.userCodeInfo.verifier);
+
+            console.log('Dados do formulário:', formData.toString());
 
             const response = await fetch(this.baseUrl + '/oauth/token', {
                 method: 'POST',
                 headers: {
-                    'Content-Type': 'application/x-www-form-urlencoded'
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                    'Accept': 'application/json'
                 },
                 body: formData.toString()
             });
