@@ -42,7 +42,7 @@ window.MERCHANT = {
         });
     }
 
-        loadAllMerchantData: function() {
+        loadAllMerchantData() {
         var self = this;
         return new Promise(function(resolve, reject) {
             try {
