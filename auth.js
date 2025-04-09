@@ -178,7 +178,7 @@ generateUserCode: async function() {
 // Obtém o token de acesso usando o código de autorização
 getTokenWithAuthCode: async function(authorizationCode) {
     try {
-        console.log('DEBUGGING - Dados de autenticação:');
+        console.log('🔍 DETALHES COMPLETOS DE AUTENTICAÇÃO:');
         console.log('Authorization Code:', authorizationCode);
         console.log('Stored Code Verifier:', this.userCodeInfo.verifier);
         console.log('Client ID:', this.credentials.client_id);
@@ -194,42 +194,72 @@ getTokenWithAuthCode: async function(authorizationCode) {
 
         const formData = new URLSearchParams();
         
-        // Log de cada adição ao FormData
-        console.log('Adicionando grant_type: authorization_code');
+        // Adiciona parâmetros de forma EXATA
         formData.append('grant_type', 'authorization_code');
-        
-        console.log('Adicionando client_id:', this.credentials.client_id);
         formData.append('client_id', this.credentials.client_id);
-        
-        console.log('Adicionando client_secret: [HIDDEN]');
         formData.append('client_secret', this.credentials.client_secret);
-        
-        console.log('Adicionando code:', authorizationCode);
         formData.append('code', authorizationCode);
-        
-        console.log('Adicionando code_verifier:', this.userCodeInfo.verifier);
         formData.append('code_verifier', this.userCodeInfo.verifier);
 
-        // Log do FormData final
-        console.log('FormData final:', formData.toString());
+        console.log('🔑 Parâmetros da requisição:', Object.fromEntries(formData));
 
         const response = await fetch(this.baseUrl + '/oauth/token', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/x-www-form-urlencoded',
-                'Accept': 'application/json'
+                'Accept': 'application/json',
+                // Adiciona headers de depuração
+                'X-Debug-Request': 'true'
             },
             body: formData.toString()
         });
 
-        console.log('Status da resposta:', response.status);
+        console.log('📡 Resposta do servidor:');
+        console.log('Status:', response.status);
+        console.log('Headers:', Object.fromEntries(response.headers.entries()));
 
         const responseText = await response.text();
-        console.log('Resposta bruta:', responseText);
+        console.log('Corpo da resposta:', responseText);
 
-        // Resto do código existente...
+        // Parse da resposta
+        let data;
+        try {
+            data = JSON.parse(responseText);
+        } catch (parseError) {
+            console.error('Erro ao parsear resposta:', parseError);
+            console.log('Resposta bruta que não pôde ser parseada:', responseText);
+            throw new Error('Resposta da API em formato inválido');
+        }
+
+        // Verificações de erro
+        if (!response.ok) {
+            console.error('Erro na resposta detalhado:', {
+                status: response.status,
+                data: data
+            });
+            throw new Error(`Erro ao obter token: ${data?.error?.message || 'Erro desconhecido'}`);
+        }
+
+        // Verificação final do token
+        if (!data.access_token) {
+            throw new Error('Nenhum token de acesso recebido');
+        }
+
+        // Salvamento do token
+        this.saveToken(data);
+        showToast('success', 'Token de acesso obtido com sucesso!');
+        
+        // Limpeza
+        this.clearUserCode();
+
+        return data;
+
     } catch (error) {
-        console.error('Erro completo ao obter token:', error);
+        console.error('❌ Erro completo:', {
+            message: error.message,
+            stack: error.stack
+        });
+        showToast('error', `Falha na autenticação: ${error.message}`);
         throw error;
     }
 },
