@@ -18,6 +18,12 @@ exports.handler = async function(event, context) {
         headers: event.headers,
         body: event.body
     });
+
+        // Adicione um log específico para eventos/polling
+    if (event.path.includes('events/polling')) {
+        console.log('🔍 Requisição de polling de eventos detectada');
+        console.log('Headers completos:', JSON.stringify(event.headers, null, 2));
+    }
     
     // Tratamento de CORS para preflight
     if (event.httpMethod === 'OPTIONS') {
