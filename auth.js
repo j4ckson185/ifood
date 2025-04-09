@@ -178,48 +178,51 @@ getTokenWithAuthCode: async function(authorizationCode) {
         console.log('Iniciando obtenção do token com código:', authorizationCode);
         console.log('UserCodeInfo atual:', this.userCodeInfo);
 
-        const formData = new URLSearchParams();
-        formData.append('grant_type', 'authorization_code');
-        formData.append('client_id', this.credentials.client_id);
-        formData.append('client_secret', this.credentials.client_secret);
-        formData.append('code', authorizationCode);
-        formData.append('code_verifier', this.userCodeInfo.verifier);
-
-        console.log('FormData preparado:', formData.toString());
+        // Verifica se o código de verificação existe
+        if (!this.userCodeInfo.verifier) {
+            throw new Error('Código verificador não encontrado');
+        }
 
         const response = await fetch(this.baseUrl + '/oauth/token', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/x-www-form-urlencoded',
-                'Accept': 'application/json'
             },
-            body: formData.toString()
+            body: new URLSearchParams({
+                grant_type: 'authorization_code',
+                client_id: this.credentials.client_id,
+                client_secret: this.credentials.client_secret,
+                code: authorizationCode,
+                code_verifier: this.userCodeInfo.verifier
+            })
         });
 
-        const responseText = await response.text();
-        console.log('Resposta bruta:', responseText);
+        // Parse da resposta
+        const data = await response.json();
 
+        // Verifica se a resposta foi bem-sucedida
         if (!response.ok) {
-            console.error('Erro na resposta:', response.status, responseText);
-            throw new Error('Falha ao obter token de acesso: ' + responseText);
+            console.error('Erro na resposta:', response.status, data);
+            throw new Error(`Erro ao obter token: ${data.error.message || 'Erro desconhecido'}`);
         }
 
-        const tokenData = JSON.parse(responseText);
-        console.log('Token obtido:', tokenData);
-        
-        if (!tokenData.access_token) {
-            throw new Error('Token inválido recebido da API');
+        // Verifica se o token de acesso foi recebido
+        if (!data.access_token) {
+            throw new Error('Token de acesso não recebido');
         }
 
-        this.saveToken(tokenData);
+        // Salva o token
+        this.saveToken(data);
         showToast('success', 'Token de acesso obtido com sucesso!');
         
-        // Limpa os dados do userCode pois não são mais necessários
-        this.userCodeInfo = {};
-        localStorage.removeItem('ifood_user_code');
+        // Limpa as informações do código de usuário
+        this.clearUserCode();
+
+        return data;
 
     } catch (error) {
         console.error('Erro ao obter token de acesso:', error);
+        showToast('error', `Erro na autenticação: ${error.message}`);
         throw error;
     }
 },
@@ -327,9 +330,6 @@ stopUserCodeCountdown: function() {
 
 // Método para limpar o código de usuário
 clearUserCode: function() {
-    // Para o countdown
-    this.stopUserCodeCountdown();
-
     // Reseta as informações do código de usuário
     this.userCodeInfo = {
         userCode: '',
