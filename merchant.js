@@ -41,6 +41,47 @@ window.MERCHANT = {
             this.loadAllMerchantData();
         });
     }
+
+        loadAllMerchantData: function() {
+        var self = this;
+        return new Promise(function(resolve, reject) {
+            try {
+                showLoading(true);
+                
+                // Encadeia as promessas para executar sequencialmente
+                self.listMerchants()
+                    .then(function() {
+                        return self.getMerchantDetails();
+                    })
+                    .then(function() {
+                        return self.getMerchantStatus();
+                    })
+                    .then(function() {
+                        return self.listInterruptions();
+                    })
+                    .then(function() {
+                        return self.getOpeningHours();
+                    })
+                    .then(function() {
+                        showToast('success', 'Dados da loja atualizados com sucesso!');
+                        resolve();
+                    })
+                    .catch(function(error) {
+                        console.error('Erro ao carregar dados do merchant:', error);
+                        showToast('error', 'Erro ao carregar dados da loja');
+                        reject(error);
+                    })
+                    .finally(function() {
+                        showLoading(false);
+                    });
+            } catch (error) {
+                console.error('Erro ao carregar dados do merchant:', error);
+                showToast('error', 'Erro ao carregar dados da loja');
+                showLoading(false);
+                reject(error);
+            }
+        });
+    },
     
     // Botão de alternar status da loja
     var toggleStatusBtn = document.getElementById('toggle-store-status');
