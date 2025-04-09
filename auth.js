@@ -34,7 +34,7 @@ window.AUTH = {
     },
     
     // Inicializa o módulo de autenticação
-init: function() {
+    init: function() {
         console.log("Inicializando módulo AUTH");
         
         // Carrega as credenciais do localStorage
@@ -87,13 +87,13 @@ init: function() {
         // Preencher campos do formulário de configurações com valores atuais
         this.updateSettingsForm();
 
-// Adiciona os event listeners para os botões de autenticação
+        // Adiciona os event listeners para os botões de autenticação
         document.getElementById('generate-user-code')?.addEventListener('click', () => this.generateUserCode());
         document.getElementById('submit-auth-code')?.addEventListener('click', () => this.submitAuthorizationCode());
     },
 
     // Gera o código de usuário para autenticação
-generateUserCode: async function() {
+    generateUserCode: async function() {
         try {
             showLoading(true);
 
@@ -136,7 +136,7 @@ generateUserCode: async function() {
                     `https://portal.ifood.com.br/apps/code?c=${data.userCode}`,
                 expiresIn: data.expiresIn || 600,
                 interval: data.interval || 5,
-                verifier: data.authorizationCodeVerifier // Usando o nome correto do campo
+                verifier: data.authorizationCodeVerifier
             };
 
             console.log('UserCodeInfo salvo:', this.userCodeInfo);
@@ -156,56 +156,64 @@ generateUserCode: async function() {
         }
     },
 
-    // Atualiza a UI com as informações do código de usuário
-    updateUserCodeUI: function() {
-        const authStatus = document.getElementById('auth-status');
-        const userCodeDisplay = document.getElementById('user-code-display');
-        const verificationUrl = document.getElementById('verification-url');
-        const expiresIn = document.getElementById('expires-in');
-
-        if (authStatus && this.userCodeInfo.userCode) {
-            authStatus.style.display = 'block';
-            userCodeDisplay.textContent = this.userCodeInfo.userCode;
-            verificationUrl.href = this.userCodeInfo.verificationUrlComplete;
-            verificationUrl.textContent = this.userCodeInfo.verificationUrl;
-
-            // Calcula o tempo restante
-            const expirationTime = new Date(Date.now() + (this.userCodeInfo.expiresIn * 1000));
-            expiresIn.textContent = `Expira em: ${expirationTime.toLocaleTimeString()}`;
-        }
-    },
-
-    // Para a verificação de status
-    stopAuthCheck: function() {
-        if (this._authCheckInterval) {
-            clearInterval(this._authCheckInterval);
-            this._authCheckInterval = null;
-            console.log('Verificação periódica interrompida');
-        }
-    },
-
-    // Obtém o token de acesso usando o código de autorização
-getTokenWithAuthCode: async function(authorizationCode) {
+    // Método para obter o token de acesso
+    getAccessToken: async function() {
         try {
-            console.log('Iniciando obtenção do token com código:', authorizationCode);
-            console.log('UserCodeInfo atual:', this.userCodeInfo);
-
-            const data = {
-                grant_type: 'authorization_code',
-                client_id: this.credentials.client_id,
-                client_secret: this.credentials.client_secret,
-                code: authorizationCode,
-                code_verifier: this.userCodeInfo.verifier
-            };
-
-            console.log('Dados a serem enviados:', data);
-
-            const formData = new URLSearchParams();
-            for (const [key, value] of Object.entries(data)) {
-                if (value) formData.append(key, value);
+            // Verifica se o token atual é válido
+            if (!this.isTokenExpired()) {
+                return this.token.access_token;
             }
 
-            console.log('FormData preparado:', formData.toString());
+            // Se tiver refresh token, tenta renová-lo
+            if (this.token.refresh_token) {
+                console.log('Tentando renovar token usando refresh token');
+                const refreshedToken = await this.refreshAccessToken();
+                return refreshedToken;
+            }
+
+            // Se não tiver refresh token, precisa de nova autenticação
+            console.log('Necessário iniciar novo fluxo de autenticação');
+            throw new Error('Necessário nova autenticação');
+
+        } catch (error) {
+            console.error('Erro ao obter token de acesso:', error);
+            
+            // Limpa tokens antigos
+            this.token = {
+                access_token: '',
+                refresh_token: '',
+                expires_at: 0,
+                token_type: 'bearer'
+            };
+            localStorage.removeItem('ifood_token');
+
+            // Mostra mensagem para iniciar nova autenticação
+            showToast('warning', 'Por favor, inicie o processo de autenticação novamente.');
+            
+            throw error;
+        }
+    },
+
+    // Método para verificar se o token expirou
+    isTokenExpired: function() {
+        if (!this.token.access_token) return true;
+        
+        const currentTime = Date.now();
+        const expirationBuffer = 5 * 60 * 1000; // 5 minutos de buffer
+        
+        return currentTime >= (this.token.expires_at - expirationBuffer);
+    },
+
+    // Atualiza o token usando refresh token
+    refreshAccessToken: async function() {
+        try {
+            console.log('Iniciando renovação de token');
+
+            const formData = new URLSearchParams();
+            formData.append('grant_type', 'refresh_token');
+            formData.append('refresh_token', this.token.refresh_token);
+            formData.append('client_id', this.credentials.client_id);
+            formData.append('client_secret', this.credentials.client_secret);
 
             const response = await fetch(this.baseUrl + '/oauth/token', {
                 method: 'POST',
@@ -216,84 +224,32 @@ getTokenWithAuthCode: async function(authorizationCode) {
                 body: formData.toString()
             });
 
-            const responseText = await response.text();
-            console.log('Resposta bruta:', responseText);
-
             if (!response.ok) {
-                console.error('Erro na resposta:', response.status, responseText);
-                throw new Error('Falha ao obter token de acesso: ' + responseText);
+                const errorText = await response.text();
+                console.error('Erro na renovação do token:', errorText);
+                throw new Error('Falha ao renovar token: ' + errorText);
             }
 
-            const tokenData = JSON.parse(responseText);
-            console.log('Token obtido:', tokenData);
-            
-            if (!tokenData.access_token) {
-                throw new Error('Token inválido recebido da API');
-            }
+            const tokenData = await response.json();
 
+            // Salva o novo token
             this.saveToken(tokenData);
-            showToast('success', 'Token de acesso obtido com sucesso!');
-            
-            // Limpa os dados do userCode pois não são mais necessários
-            this.userCodeInfo = {};
-            localStorage.removeItem('ifood_user_code');
+
+            console.log('Token renovado com sucesso');
+            return tokenData.access_token;
 
         } catch (error) {
-            console.error('Erro ao obter token de acesso:', error);
+            console.error('Erro no refresh token:', error);
             throw error;
         }
     },
-    
-    // Atualiza os campos do formulário de configurações
-    updateSettingsForm: function() {
-        var clientIdInput = document.getElementById('client-id');
-        var clientSecretInput = document.getElementById('client-secret');
-        var merchantIdInput = document.getElementById('merchant-id-input');
-        var merchantUuidInput = document.getElementById('merchant-uuid-input');
-        
-        if (clientIdInput) clientIdInput.value = this.credentials.client_id;
-        if (clientSecretInput) clientSecretInput.value = this.credentials.client_secret;
-        if (merchantIdInput) merchantIdInput.value = this.credentials.merchantId;
-        if (merchantUuidInput) merchantUuidInput.value = this.credentials.merchantUuid;
-    },
-    
-    // Salva as credenciais no localStorage
-    saveCredentials: function(credentials) {
-        var updated = {
-            client_id: credentials.client_id || this.credentials.client_id,
-            client_secret: credentials.client_secret || this.credentials.client_secret,
-            merchantId: credentials.merchantId || this.credentials.merchantId,
-            merchantUuid: credentials.merchantUuid || this.credentials.merchantUuid
-        };
-        
-        this.credentials = updated;
-        localStorage.setItem('ifood_credentials', JSON.stringify(this.credentials));
-        
-        // Atualiza a UI com o ID do merchant
-        if (document.getElementById('merchant-id-display')) {
-            document.getElementById('merchant-id-display').textContent = this.credentials.merchantId;
-        }
-        
-        console.log("Credenciais salvas:", this.credentials);
-    },
-    
-    // Método para verificar expiração do token
-    isTokenExpired: function() {
-        if (!this.token.access_token) return true;
-        if (!this.token.expires_at) return true;
-        
-        const currentTime = Date.now();
-        const expirationBuffer = 15 * 60 * 1000; // 15 minutos
-        
-        return currentTime >= (this.token.expires_at - expirationBuffer);
-    },
-    
-    // Método para salvar o token com tratamento adicional
+
+    // Salva o token recebido
     saveToken: function(tokenData) {
         const currentTime = Date.now();
         const expiresIn = tokenData.expires_in 
             ? parseInt(tokenData.expires_in) * 1000  // converte para milissegundos
-            : 3 * 60 * 60 * 1000;  // 3 horas como padrão
+            : 3600000;  // 1 hora como padrão
 
         this.token = {
             access_token: tokenData.access_token || '',
@@ -309,69 +265,7 @@ getTokenWithAuthCode: async function(authorizationCode) {
         
         localStorage.setItem('ifood_token', JSON.stringify(this.token));
     },
-    
-    // Método para renovar token usando refresh token
-    refreshAccessToken: async function() {
-        try {
-            if (!this.token.refresh_token) {
-                console.log('Sem refresh token disponível.');
-                throw new Error('Refresh token não disponível');
-            }
 
-            const response = await fetch(this.baseUrl + '/authentication/v1.0/oauth/token', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    grant_type: 'refresh_token',
-                    refresh_token: this.token.refresh_token,
-                    client_id: this.credentials.client_id,
-                    client_secret: this.credentials.client_secret
-                })
-            });
-
-            if (!response.ok) {
-                throw new Error('Falha ao atualizar token');
-            }
-
-            const tokenData = await response.json();
-            
-            if (!tokenData.access_token) {
-                throw new Error('Novo token inválido');
-            }
-
-            this.saveToken(tokenData);
-            console.log('Token atualizado com sucesso via refresh token');
-            showToast('info', 'Token atualizado automaticamente');
-            
-            return tokenData.access_token;
-        } catch (error) {
-            console.error('Erro no refresh token:', error);
-            throw error;
-        }
-    },
-    
-    // Obtém um token de acesso
-    getAccessToken: async function() {
-        try {
-            if (this.isTokenExpired()) {
-                console.log('Token expirado ou próximo de expirar. Iniciando renovação.');
-                
-                if (this.token.refresh_token) {
-                    return await this.refreshAccessToken();
-                } else {
-                    throw new Error('Necessário nova autenticação');
-                }
-            }
-            
-            return this.token.access_token;
-        } catch (error) {
-            console.error('Erro ao obter token de acesso:', error);
-            throw error;
-        }
-    },
-    
     // Obtém headers de autenticação
     getAuthHeaders: async function() {
         const token = await this.getAccessToken();
@@ -380,7 +274,7 @@ getTokenWithAuthCode: async function(authorizationCode) {
             'Content-Type': 'application/json'
         };
     },
-    
+
     // Realiza uma requisição autenticada
     apiRequest: async function(endpoint, options = {}) {
         try {
@@ -404,12 +298,6 @@ getTokenWithAuthCode: async function(authorizationCode) {
             const response = await fetch(this.baseUrl + endpoint, fetchOptions);
 
             if (!response.ok) {
-                if (response.status === 401) {
-                    // Se o token expirou, tenta renovar e refaz a requisição
-                    await this.refreshAccessToken();
-                    return this.apiRequest(endpoint, options);
-                }
-                
                 const text = await response.text();
                 throw new Error(`Erro ${response.status}: ${text}`);
             }
@@ -426,6 +314,7 @@ getTokenWithAuthCode: async function(authorizationCode) {
             throw error;
         }
     },
+    
 submitAuthorizationCode: async function() {
         try {
             const authCodeInput = document.getElementById('authorization-code');
