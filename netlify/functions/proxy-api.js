@@ -88,10 +88,6 @@ exports.handler = async function(event, context) {
             headers: headers
         };
 
-                if (.includes(event.httpMethod) && event.body) {
-            options.body = event.body;
-        }
-
         // LOG ADICIONAL PARA VERIFICAR O QUE ESTÁ SENDO ENVIADO
         console.log("Opções da requisição PARA O IFOOD:", {
             method: options.method,
