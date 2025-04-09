@@ -282,6 +282,7 @@ pollForEvents: async function() {
         
         // Lista de endpoints para tentar
         const pollingEndpoints = [
+            '/events/v1.0/events:polling',  // Nova rota principal
             '/events:polling',
             '/merchant/v1.0/events:polling',
             '/events/polling',
@@ -386,7 +387,7 @@ sendAcknowledgment: async function(eventIds) {
             const batch = eventIds.slice(i, i + batchSize);
             
             // Corrigindo a rota para /events/acknowledgment
-            await window.AUTH.apiRequest('/events/acknowledgment', {
+            await window.AUTH.apiRequest('/events/v1.0/events/acknowledgment', {
                 method: 'POST',
                 body: JSON.stringify({
                     eventIds: batch
