@@ -307,15 +307,6 @@ updateUserCodeUI: function() {
     }
 },
 
-// Adicione este método ao seu objeto AUTH
-stopAuthCheck: function() {
-    if (this._authCheckInterval) {
-        clearInterval(this._authCheckInterval);
-        this._authCheckInterval = null;
-        console.log('Verificação periódica interrompida');
-    }
-},
-
 // Inicia uma contagem regressiva para o código de usuário
 startUserCodeCountdown: function() {
     // Para qualquer countdown anterior
