@@ -283,10 +283,8 @@ pollForEvents: async function() {
         // Lista de endpoints para tentar
         const pollingEndpoints = [
             '/events/v1.0/events:polling',  // Nova rota principal
-            '/events:polling',
-            '/merchant/v1.0/events:polling',
-            '/events/polling',
-            '/merchant/events:polling'
+            '/events/v1.0/events/polling',  // Tente também esta variação
+            '/events/polling'
         ];
         
         let events = null;
