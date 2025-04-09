@@ -87,6 +87,21 @@ exports.handler = async function(event, context) {
             method: event.httpMethod,
             headers: headers
         };
+
+                if (.includes(event.httpMethod) && event.body) {
+            options.body = event.body;
+        }
+
+        // LOG ADICIONAL PARA VERIFICAR O QUE ESTÁ SENDO ENVIADO
+        console.log("Opções da requisição PARA O IFOOD:", {
+            method: options.method,
+            headers: options.headers,
+            body: options.body // Log do corpo da requisição
+        });
+
+        console.log("Enviando requisição para iFood...");
+        const response = await fetch(url, options);
+        console.log("Resposta do iFood:", response.status, response.statusText);
         
         // Para métodos com body
         if (['POST', 'PUT', 'PATCH'].includes(event.httpMethod) && event.body) {
