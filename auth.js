@@ -195,15 +195,12 @@ getTokenWithAuthCode: async function(authorizationCode) {
 let formData = new URLSearchParams();
         
         // Adiciona parâmetros de forma EXATA
-        formData.append('grant_type', 'authorization_code');
-        formData.append('client_id', this.credentials.client_id);
-        formData.append('client_secret', this.credentials.client_secret);
-        formData.append('code', authorizationCode);
-        formData.append('code_verifier', this.userCodeInfo.verifier);
-
-        console.log('🔑 Parâmetros da requisição:', Object.fromEntries(formData));
-
-const formData = `grant_type=authorization_code&client_id=${encodeURIComponent(this.credentials.client_id)}&client_secret=${encodeURIComponent(this.credentials.client_secret)}&code=${encodeURIComponent(authorizationCode)}&code_verifier=${encodeURIComponent(this.userCodeInfo.verifier)}`;
+const formData = new URLSearchParams();
+formData.append('grant_type', 'authorization_code');
+formData.append('client_id', this.credentials.client_id);
+formData.append('client_secret', this.credentials.client_secret);
+formData.append('code', authorizationCode);
+formData.append('code_verifier', this.userCodeInfo.verifier);
 
 const response = await fetch(this.baseUrl + '/oauth/token', {
     method: 'POST',
@@ -211,7 +208,7 @@ const response = await fetch(this.baseUrl + '/oauth/token', {
         'Content-Type': 'application/x-www-form-urlencoded',
         'Accept': 'application/json'
     },
-    body: formData
+    body: formData.toString()
 });
 
         console.log('📡 Resposta do servidor:');
