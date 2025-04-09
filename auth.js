@@ -183,27 +183,44 @@ getTokenWithAuthCode: async function(authorizationCode) {
             throw new Error('Código verificador não encontrado');
         }
 
+        // Log detalhado dos parâmetros
+        const params = {
+            grant_type: 'authorization_code',
+            client_id: this.credentials.client_id,
+            client_secret: this.credentials.client_secret,
+            code: authorizationCode,
+            code_verifier: this.userCodeInfo.verifier
+        };
+
+        console.log('Parâmetros da requisição:', JSON.stringify(params));
+
+        const formData = new URLSearchParams();
+        Object.entries(params).forEach(([key, value]) => {
+            console.log(`Adicionando ${key}: ${value}`);
+            formData.append(key, value);
+        });
+
+        console.log('FormData toString:', formData.toString());
+
         const response = await fetch(this.baseUrl + '/oauth/token', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/x-www-form-urlencoded',
             },
-            body: new URLSearchParams({
-                grant_type: 'authorization_code',
-                client_id: this.credentials.client_id,
-                client_secret: this.credentials.client_secret,
-                code: authorizationCode,
-                code_verifier: this.userCodeInfo.verifier
-            })
+            body: formData
         });
+
+        // Log do status da resposta
+        console.log('Status da resposta:', response.status);
 
         // Parse da resposta
         const data = await response.json();
+        console.log('Dados da resposta:', JSON.stringify(data));
 
         // Verifica se a resposta foi bem-sucedida
         if (!response.ok) {
             console.error('Erro na resposta:', response.status, data);
-            throw new Error(`Erro ao obter token: ${data.error.message || 'Erro desconhecido'}`);
+            throw new Error(`Erro ao obter token: ${data.error?.message || 'Erro desconhecido'}`);
         }
 
         // Verifica se o token de acesso foi recebido
