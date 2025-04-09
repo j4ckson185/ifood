@@ -192,7 +192,7 @@ getTokenWithAuthCode: async function(authorizationCode) {
             throw new Error('Code verifier não encontrado');
         }
 
-        const formData = new URLSearchParams();
+let formData = new URLSearchParams();
         
         // Adiciona parâmetros de forma EXATA
         formData.append('grant_type', 'authorization_code');
