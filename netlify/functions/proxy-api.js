@@ -9,12 +9,6 @@ const corsHeaders = {
 };
 
 exports.handler = async function(event, context) {
-    console.log("Requisição recebida no proxy:", {
-        path: event.path,
-        method: event.method,
-        headers: event.headers,
-        body: event.body
-    });
     // URLs base da API do iFood
     const IFOOD_API_BASE = 'https://merchant-api.ifood.com.br';
     
