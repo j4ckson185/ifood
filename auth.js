@@ -152,6 +152,9 @@ window.AUTH = {
                 verifier: data.authorizationCodeVerifier
             };
 
+            // Salva o momento da geração para contagem regressiva
+            localStorage.setItem('user_code_generated_at', new Date().toISOString());
+
             console.log('UserCodeInfo salvo:', this.userCodeInfo);
 
             // Salva no localStorage
