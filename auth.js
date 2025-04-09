@@ -172,6 +172,15 @@ generateUserCode: async function() {
     }
 },
 
+// Para a verificação de status
+stopAuthCheck: function() {
+    if (this._authCheckInterval) {
+        clearInterval(this._authCheckInterval);
+        this._authCheckInterval = null;
+        console.log('Verificação periódica interrompida');
+    }
+},
+
 // Atualiza a UI com as informações do código de usuário
 updateUserCodeUI: function() {
     const authStatus = document.getElementById('auth-status');
@@ -202,6 +211,15 @@ updateUserCodeUI: function() {
 
         // Inicia o countdown para expiração
         this.startUserCodeCountdown();
+    }
+},
+
+// Adicione este método ao seu objeto AUTH
+stopAuthCheck: function() {
+    if (this._authCheckInterval) {
+        clearInterval(this._authCheckInterval);
+        this._authCheckInterval = null;
+        console.log('Verificação periódica interrompida');
     }
 },
 
